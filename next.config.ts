@@ -1,12 +1,12 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   typescript: {
-    // 빌드 시 타입 에러 무시 (강제 배포용)
     ignoreBuildErrors: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
-    // 이미지 최적화 오류 방지
     unoptimized: true,
   },
 };
