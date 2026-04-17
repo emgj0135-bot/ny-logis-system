@@ -70,17 +70,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
             )}
 
-            {/* 관리자만 볼 수 있는 나머지 메뉴 */}
-            {role === 'admin' && (
-              <>
-                <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
-                  <span className="text-xl">⚠️</span> <span>사고 접수</span>
-                </Link>
-                <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
-                  <span className="text-xl">💰</span> <span>착불 관리</span>
-                </Link>
-              </>
-            )}
+            {/* 사고 접수 담당자(accident_manager) 또는 관리자(admin)만 보임 */}
+{(role === 'admin' || role === 'accident_manager') && (
+  <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
+    <span className="text-xl">⚠️</span> <span>사고 접수</span>
+  </Link>
+)}
           </div>
 
           <div className="mt-auto space-y-4">
