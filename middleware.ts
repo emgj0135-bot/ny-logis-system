@@ -26,11 +26,13 @@ export function middleware(request: NextRequest) {
 export const config = {
   /*
    * 아래의 경로들을 제외한 모든 페이지 접속을 감시함:
-   * - api (데이터 통신용 주소)
-   * - _next/static (사이트 구동용 정적 파일)
-   * - _next/image (이미지 파일)
-   * - favicon.ico (아이콘 파일)
-   * - public 폴더 내의 파일들
+   * - api (데이터 통신)
+   * - _next/static (정적 파일)
+   * - _next/image (Next.js 이미지 최적화)
+   * - favicon.ico (아이콘)
+   * - .png, .jpg, .jpeg, .gif, .svg (이미지 확장자들 추가!)
    */
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
+  ],
 }
