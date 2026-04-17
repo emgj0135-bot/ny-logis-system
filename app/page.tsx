@@ -1,82 +1,96 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+// 수파베이스 클라이언트 설정
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ pallet: 0, truck: 0, accident: 0, cod: 0 });
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
-    const { count: pCount } = await supabase.from('pallets').select('*', { count: 'exact', head: true }).eq('is_confirmed', false);
-    const { count: tCount } = await supabase.from('trucks').select('*', { count: 'exact', head: true }).eq('status', '배차요청');
-    const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).neq('status', '보상승인');
-    const { count: cCount } = await supabase.from('cod_manage').select('*', { count: 'exact', head: true }).eq('is_confirmed', false);
-    setStats({ pallet: pCount || 0, truck: tCount || 0, accident: aCount || 0, cod: cCount || 0 });
-  };
+  useEffect(() => {
+    const getRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // 유저 메타데이터에서 role을 가져옴 (기본값 'user')
+      setRole(user?.user_metadata?.role || 'user');
+      setLoading(false);
+    };
+    getRole();
+  }, []);
 
-  useEffect(() => { fetchStats(); }, []);
+  // 로딩 중일 때 잠깐 보여줄 화면 (깜빡임 방지)
+  if (loading) {
+    return <div className="p-8 text-slate-500 font-bold">데이터 로딩 중...</div>;
+  }
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen">
-      <div className="max-w-5xl mx-auto">
-        <header className="mb-16 flex justify-between items-center border-b border-slate-200 pb-10">
-          <div>
-            {/* 로고 이미지를 제거하고 텍스트 디자인으로 변경 */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-10 h-1 bg-[#1055a4]"></span>
-              <p className="text-[10px] font-black text-[#1055a4] uppercase tracking-[0.5em]">NY International Logistics</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight">NY LOGIS 대시보드</h1>
+        <p className="text-slate-500 font-medium mt-1">
+          {role === 'truck_vendor' ? '용차업체 파트너용 화면입니다.' : '천안센터 관리자용 화면입니다.'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        {/* --- 🚚 용차 배차관리 (관리자 & 용차업체 공통) --- */}
+        {(role === 'admin' || role === 'truck_vendor') && (
+          <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">🚚</span>
+              <h2 className="text-lg font-bold text-slate-800">용차 배차관리</h2>
             </div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
-              안녕하세요 <span className="text-[#1055a4]"></span>
-            </h1>
-            <p className="text-slate-400 font-bold mt-2 text-base">천안 물류센터의 오늘 자 실시간 현황판입니다.</p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              현재 진행 중인 배차 리스트를 확인하고 관리합니다.
+            </p>
+            {/* 여기에 실제 배차 리스트나 요약 숫자를 넣으면 돼! */}
           </div>
-          
-          <div className="p-6 bg-[#1055a4] rounded-[32px] text-center shadow-xl w-72">
-            <p className="text-sky-300 font-black text-xs uppercase tracking-[0.3em] mb-2">통합 관리 시스템</p>
-            <p className="text-white font-bold text-sm italic">"데이터 중심의 스마트 물류 운영"</p>
-          </div>
-        </header>
+        )}
 
-        {/* 상황판 카드 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-          <div className="bg-white p-7 rounded-[32px] shadow-sm border border-slate-200">
-            <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">미확인 파렛트</p>
-            <p className="text-4xl font-black text-slate-900">{stats.pallet}<span className="text-sm ml-1 text-slate-300">건</span></p>
+        {/* --- ⏳ 배차대기 현황 (관리자 & 용차업체 공통) --- */}
+        {(role === 'admin' || role === 'truck_vendor') && (
+          <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">⏳</span>
+              <h2 className="text-lg font-bold text-slate-800">배차대기 현황</h2>
+            </div>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              새로 등록된 배차 요청 건을 확인하고 배차를 확정하세요.
+            </p>
           </div>
-          <div className="bg-white p-7 rounded-[32px] shadow-sm border border-slate-200">
-            <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">배차 대기</p>
-            <p className="text-4xl font-black text-orange-500">{stats.truck}<span className="text-sm ml-1 text-slate-300">건</span></p>
-          </div>
-          <div className="bg-white p-7 rounded-[32px] shadow-sm border border-slate-200">
-            <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">사고 처리중</p>
-            <p className="text-4xl font-black text-red-500">{stats.accident}<span className="text-sm ml-1 text-slate-300">건</span></p>
-          </div>
-          <div className="bg-white p-7 rounded-[32px] shadow-sm border border-slate-200">
-            <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">미확인 착불</p>
-            <p className="text-4xl font-black text-blue-600">{stats.cod}<span className="text-sm ml-1 text-slate-300">건</span></p>
-          </div>
-        </div>
+        )}
 
-        {/* 메뉴 바로가기 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link href="/pallet" className="bg-white p-10 rounded-[40px] border border-slate-200 hover:border-orange-500 transition-all flex items-center justify-between shadow-sm group">
-            <div><h2 className="text-2xl font-black text-slate-800 mb-1">파렛트 재고 관리</h2><p className="text-sm text-slate-400">실시간 입출고 데이터 및 전표 번호 확인</p></div>
-            <span className="text-5xl group-hover:scale-110 transition-all">📦</span>
-          </Link>
-          <Link href="/truck" className="bg-white p-10 rounded-[40px] border border-slate-200 hover:border-orange-500 transition-all flex items-center justify-between shadow-sm group">
-            <div><h2 className="text-2xl font-black text-slate-800 mb-1">용차 배차 관리</h2><p className="text-sm text-slate-400">하차지별 배차 정보 및 기사님 정보 등록</p></div>
-            <span className="text-5xl group-hover:scale-110 transition-all">🚚</span>
-          </Link>
-          <Link href="/accident" className="bg-white p-10 rounded-[40px] border border-slate-200 hover:border-red-500 transition-all flex items-center justify-between shadow-sm group">
-            <div><h2 className="text-2xl font-black text-slate-800 mb-1">사고 접수 센터</h2><p className="text-sm text-slate-400">CJ 단톡방 사고 기록 및 변상 금액 관리</p></div>
-            <span className="text-5xl group-hover:scale-110 transition-all">⚠️</span>
-          </Link>
-          <Link href="/cod" className="bg-white p-10 rounded-[40px] border border-slate-200 hover:border-blue-500 transition-all flex items-center justify-between shadow-sm group">
-            <div><h2 className="text-2xl font-black text-slate-800 mb-1">착불 정산 관리</h2><p className="text-sm text-slate-400">운임비 수금 확인 및 입금 계좌 안내</p></div>
-            <span className="text-5xl group-hover:scale-110 transition-all">💰</span>
-          </Link>
-        </div>
+        {/* --- 📦 파렛트 재고 현황 (관리자전용) --- */}
+        {role === 'admin' && (
+          <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">📦</span>
+              <h2 className="text-lg font-bold text-slate-800">파렛트 재고관리</h2>
+            </div>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              전체 파렛트 입출고 및 현재 재고 데이터를 관리합니다.
+            </p>
+          </div>
+        )}
+
+        {/* --- ⚠️ 사고 및 정산 현황 (관리자전용) --- */}
+        {role === 'admin' && (
+          <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">💰</span>
+              <h2 className="text-lg font-bold text-slate-800">정산 및 사고현황</h2>
+            </div>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              미수금 관리, 착불 정산 및 사고 접수 내역을 확인합니다.
+            </p>
+          </div>
+        )}
+
       </div>
     </div>
   );
