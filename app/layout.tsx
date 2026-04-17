@@ -67,7 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mt-auto space-y-4">
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[9px] font-black text-slate-400 uppercase">관리자</p>
-              <p className="text-xs font-black text-slate-900 mt-1 italic uppercase tracking-tighter">Gaeng-mi Partner</p>
+              <p className="text-xs font-black text-slate-900 mt-1 italic uppercase tracking-tighter">천안센터</p>
             </div>
             
             {/* 로그아웃 버튼 추가! */}
