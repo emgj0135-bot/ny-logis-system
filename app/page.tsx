@@ -1,12 +1,45 @@
-const handleLogout = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    alert("로그아웃 실패: " + error.message);
-  } else {
-    // 로그아웃 성공 시 로그인 페이지로 뻥 차버리기
+
+"use client"; // 최상단에 이게 있어야 버튼 클릭이 작동해!
+import { createClient } from "@supabase/supabase-js";
+
+// 1. 수파베이스 설정 (이미 있으면 패스!)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export default function Layout() { // 파일 이름에 따라 다름
+  
+  // 2. 로그아웃 함수
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     window.location.href = "/login";
-  }
-};
+  };
+
+  return (
+    <div>
+      {/* 기존 메뉴 코드들... */}
+      
+      {/* 3. 갱미가 물어본 JSX 버튼 코드 */}
+      <div style={{ padding: '20px' }}>
+        <button 
+          onClick={handleLogout}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#ff4d4f',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          로그아웃
+        </button>
+      </div>
+    </div>
+  );
+}
 
 "use client";
 import React, { useEffect, useState } from 'react';
