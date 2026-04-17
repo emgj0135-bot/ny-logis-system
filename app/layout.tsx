@@ -1,8 +1,37 @@
 "use client";
 import './globals.css';
 import Link from 'next/link';
+import { createClient } from "@supabase/supabase-js";
+import { usePathname } from "next/navigation";
+
+// 수파베이스 연결
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  // 로그아웃 함수
+  const handleLogout = async () => {
+    if (confirm("로그아웃 하시겠습니까?")) {
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    }
+  };
+
+  // 로그인 페이지에서는 사이드바를 숨기고 내용만 보여줌
+  if (pathname === '/login') {
+    return (
+      <html lang="ko">
+        <body className="bg-slate-50 min-h-screen font-sans">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="ko">
       <body className="flex bg-slate-50 min-h-screen font-sans">
@@ -35,9 +64,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
           </div>
 
-          <div className="mt-auto p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-[9px] font-black text-slate-400 uppercase">관리자</p>
-            <p className="text-xs font-black text-slate-900 mt-1 italic uppercase tracking-tighter">Gaeng-mi Partner</p>
+          <div className="mt-auto space-y-4">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[9px] font-black text-slate-400 uppercase">관리자</p>
+              <p className="text-xs font-black text-slate-900 mt-1 italic uppercase tracking-tighter">Gaeng-mi Partner</p>
+            </div>
+            
+            {/* 로그아웃 버튼 추가! */}
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl font-bold text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+            >
+              <span>🚪</span> <span className="text-sm">로그아웃</span>
+            </button>
           </div>
         </nav>
 
