@@ -1,3 +1,13 @@
+const handleLogout = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    alert("로그아웃 실패: " + error.message);
+  } else {
+    // 로그아웃 성공 시 로그인 페이지로 뻥 차버리기
+    window.location.href = "/login";
+  }
+};
+
 "use client";
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
