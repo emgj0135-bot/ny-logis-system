@@ -84,7 +84,7 @@ export default function CodPage() {
           
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-              FINANCE <span className="text-blue-600">SETTLEMENT</span>
+              착불 <span className="text-blue-600">관리</span>
             </h1>
             <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
               천안센터 <span className="text-blue-600/60 font-black">착불 운임 및 정산 관리 시스템</span>
@@ -136,7 +136,7 @@ export default function CodPage() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[200]">
           <div className="bg-white p-10 rounded-[48px] w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 font-black text-xl font-sans">✕</button>
-            <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">Enter <span className="text-blue-600">Finance</span> Data</h2>
+            <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">신규 <span className="text-blue-600">착불</span> 관리</h2>
             <form onSubmit={handleSubmit} className="space-y-6 text-sm font-bold">
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-400 ml-4 mb-1 uppercase tracking-widest">Type Selection</p>
