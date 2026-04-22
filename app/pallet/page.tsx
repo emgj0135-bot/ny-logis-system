@@ -92,7 +92,7 @@ export default function PalletsPage() {
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-              PALLET <span className="text-blue-600">CONTROL</span>
+              파렛트 <span className="text-blue-600">전표</span>
             </h1>
             <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
               천안센터 <span className="text-blue-600/60 font-black">파렛트 전표 관리 시스템</span>
