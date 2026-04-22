@@ -88,6 +88,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
             </Link>
             
+            {/* --- 상차 담당자 관리 (관리자만 가능) --- */}
+{role === 'admin' && (
+  <Link href="/staff" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-green-600 transition-all group">
+    <span className="text-xl group-hover:scale-110">👥</span> <span>상차 담당자 관리</span>
+  </Link>
+)}
+
+{/* --- 기존 즐겨찾기 메뉴 --- */}
+<Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+  <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
+</Link>
+            
           </div>
 
           <div className="mt-auto space-y-4">
