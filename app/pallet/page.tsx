@@ -61,7 +61,7 @@ export default function PalletPage() {
     <div className="p-8 text-black bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">📦 파렛트 <span className="text-orange-500">재고 관리</span></h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">📦 파렛트 <span className="text-orange-500">전표 관리</span></h1>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setShowOnlyUnconfirmed(!showOnlyUnconfirmed)} className={`px-5 py-3 rounded-2xl text-xs font-bold border transition-all ${showOnlyUnconfirmed ? 'bg-orange-500 text-white' : 'bg-white text-slate-500 border-slate-200'}`}>
