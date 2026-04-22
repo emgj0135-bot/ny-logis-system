@@ -319,11 +319,11 @@ export default function TruckPage() {
             <div className="space-y-6 font-black">
               <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-4 shadow-inner">
                 <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm">
-                  {['당일배차', '예약배차'].map(t => (
+                  {['당일배차', '야상배차'].map(t => (
                     <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-3 rounded-xl text-xs transition-all ${orderType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>{t}</button>
                   ))}
                 </div>
-                {orderType === '예약배차' && (
+                {orderType === '야상배차' && (
                   <div className="grid grid-cols-2 gap-4">
                     <input type="date" value={formData.loading_date} className="p-4 rounded-2xl border-none text-sm shadow-sm outline-none" onChange={e => setFormData({...formData, loading_date: e.target.value})} />
                     <input type="date" value={formData.unloading_date} className="p-4 rounded-2xl border-none text-sm shadow-sm outline-none" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
