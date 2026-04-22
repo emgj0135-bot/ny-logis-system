@@ -24,7 +24,6 @@ export default function TruckPage() {
     product_name: "", loading_time: "09:00", unloading_time: "익일 08:00", remarks: ""
   });
 
-  // 갱미야! 여기에 status를 추가해서 콤보박스 상태를 관리할게.
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
 
   useEffect(() => { fetchData(); }, []);
@@ -48,7 +47,6 @@ export default function TruckPage() {
       const { data } = await supabase.from('order_responses').select('*').eq('order_id', id).maybeSingle();
       setCurrentResponse(data || null);
       
-      // 정보를 불러올 때 기존의 status도 같이 세팅해줘야 해!
       setResData({ 
         car_info: data?.car_info || "", 
         driver_name: data?.driver_name || "", 
@@ -76,38 +74,23 @@ export default function TruckPage() {
     if (!error) fetchData();
   };
 
-  // 🛠️ 갱미야, 이 부분이 핵심이야! 이제 status를 사용자가 선택한 대로 업데이트해.
   const handleResponseSubmit = async (orderId: number) => {
     if (!resData.car_info || !resData.driver_name) return alert("기사 정보를 입력해줘!");
-    
     const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
     
-    // 1. 배차 상세 정보 저장 (차량, 기사, 운임)
     if (existing) {
-      await supabase.from('order_responses').update({
-        car_info: resData.car_info,
-        driver_name: resData.driver_name,
-        fee: resData.fee
-      }).eq('id', existing.id);
+      await supabase.from('order_responses').update({ car_info: resData.car_info, driver_name: resData.driver_name, fee: resData.fee }).eq('id', existing.id);
     } else {
-      await supabase.from('order_responses').insert([{ 
-        order_id: orderId, 
-        car_info: resData.car_info,
-        driver_name: resData.driver_name,
-        fee: resData.fee
-      }]);
+      await supabase.from('order_responses').insert([{ order_id: orderId, car_info: resData.car_info, driver_name: resData.driver_name, fee: resData.fee }]);
     }
 
-    // 2. 메인 주문의 상태 업데이트 (사용자가 선택한 콤보박스 값으로!)
     const { error } = await supabase.from('truck_orders').update({ status: resData.status }).eq('id', orderId);
-    
     if (!error) {
       alert(`정보가 저장되었습니다! 현재 상태: [${resData.status}] ✅`);
       fetchData();
     }
   };
 
-  // 즐겨찾기 로직 (중략 방지 위해 유지)
   const handleStaffChange = (staffName: string) => {
     const selected = staffs.find(s => s.name === staffName);
     setFormData(prev => ({ ...prev, loading_manager: staffName, loading_phone: selected?.phone || "" }));
@@ -135,15 +118,32 @@ export default function TruckPage() {
   };
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-black italic text-slate-800 tracking-tighter uppercase">🚚 NY LOGIS 배차관리</h1>
-        <button onClick={() => { setSelectedOrder(null); setShowOrderModal(true); }} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:scale-105 transition-all">+ 신규 배차 신청</button>
+    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
+      
+      {/* 🔵 블루 포인트 헤더 섹션 - 완벽 통일! */}
+      <div className="flex justify-between items-center mb-10">
+        <div className="flex items-center gap-4">
+          <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
+              TRUCK <span className="text-blue-600">DISPATCH</span>
+            </h1>
+            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
+              천안센터 <span className="text-blue-600 font-black">용차 배차 및 실시간 현황 관리</span>
+            </p>
+          </div>
+        </div>
+        <button 
+          onClick={() => { setSelectedOrder(null); setShowOrderModal(true); }} 
+          className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all text-sm"
+        >
+          + 신규 배차 신청
+        </button>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-400 font-bold text-[11px] uppercase border-b">
+          <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest">
             <tr>
               <th className="p-5 text-center w-16">No</th>
               <th className="p-5 text-center w-32">날짜</th>
@@ -158,19 +158,19 @@ export default function TruckPage() {
               return (
                 <React.Fragment key={item.id}>
                   <tr onClick={() => toggleExpand(item.id)} className="cursor-pointer hover:bg-slate-50 border-b transition-colors">
-                    <td className="p-5 text-center font-black text-blue-500">{list.length - index}</td>
+                    <td className="p-5 text-center font-black text-blue-600">{list.length - index}</td>
                     <td className="p-5 text-center text-slate-500 font-bold">{item.loading_date}</td>
                     <td className="p-5">
-                      <p className="font-black text-slate-800">{item.loading_place} 👉 {item.unloading_place}</p>
-                      <p className="text-[11px] text-slate-400 mt-1 font-bold">📦 {item.product_name} | {item.loading_time} 상차</p>
+                      <p className="font-black text-slate-800 text-base tracking-tight">{item.loading_place} 👉 {item.unloading_place}</p>
+                      <p className="text-[11px] text-slate-400 mt-1 font-bold uppercase tracking-wider">📦 {item.product_name} | {item.loading_time} 상차</p>
                     </td>
                     <td className="p-5 text-center">
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>{item.status}</span>
+                      <span className={`text-[10px] font-black px-4 py-1.5 rounded-full whitespace-nowrap shadow-sm ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 border border-orange-100 animate-pulse'}`}>{item.status}</span>
                     </td>
                     <td className="p-5 text-center">
                       <div className="flex gap-2 justify-center font-black text-[10px]">
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedOrder(item); setFormData({...item}); setOrderType(item.order_type); setShowOrderModal(true); }} className="text-blue-500 bg-blue-50 px-3 py-1.5 rounded-lg">수정</button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="text-red-400 bg-red-50 px-3 py-1.5 rounded-lg">삭제</button>
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedOrder(item); setFormData({...item}); setOrderType(item.order_type); setShowOrderModal(true); }} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all">수정</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">삭제</button>
                       </div>
                     </td>
                   </tr>
@@ -178,16 +178,22 @@ export default function TruckPage() {
                     <tr className="bg-slate-50/50">
                       <td colSpan={5} className="p-8 animate-in slide-in-from-top-2">
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
-                          <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <span className="text-3xl font-black text-orange-500 italic">B.</span>
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">운송사 배차 정보 입력</p>
+                          
+                          {/* 💡 잼민이의 묘수: 요청 정보 요약 박스 (업체에서 보기 편하게!) */}
+                          <div className="bg-blue-50 p-6 rounded-[2rem] mb-8 border border-blue-100 flex justify-between items-center">
+                            <div>
+                              <p className="text-[10px] font-black text-blue-400 uppercase mb-2 tracking-widest">Order Summary</p>
+                              <h3 className="text-xl font-black text-slate-800 tracking-tight">
+                                {item.loading_place} <span className="text-blue-600 mx-2">→</span> {item.unloading_place}
+                              </h3>
+                              <p className="text-xs font-bold text-slate-500 mt-1 uppercase">
+                                {item.product_name} | {item.loading_date} {item.loading_time}
+                              </p>
                             </div>
-                            {/* 🛠️ 여기에 상태 변경 콤보박스 추가! */}
-                            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl">
-                                <span className="text-[10px] font-black text-slate-400 ml-2">진행 상태</span>
+                            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Status</span>
                                 <select 
-                                    className="bg-white border-none rounded-xl px-4 py-2 font-black text-xs shadow-sm outline-none text-slate-700"
+                                    className="bg-slate-100 border-none rounded-xl px-4 py-2 font-black text-xs shadow-inner outline-none text-blue-600"
                                     value={resData.status}
                                     onChange={(e) => setResData({...resData, status: e.target.value})}
                                 >
@@ -196,21 +202,22 @@ export default function TruckPage() {
                                 </select>
                             </div>
                           </div>
+
                           <div className="flex gap-4 w-full items-end bg-slate-50 p-6 rounded-3xl">
                             <div className="flex-1 space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 ml-2">차량 정보 (차번호/톤수)</label>
-                                <input placeholder="예: 11가1234 / 5톤" value={resData.car_info} className="w-full p-4 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setResData({...resData, car_info: e.target.value})} />
+                                <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Vehicle Info</label>
+                                <input placeholder="예: 11가1234 / 5톤" value={resData.car_info} className="w-full p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-inner" onChange={e => setResData({...resData, car_info: e.target.value})} />
                             </div>
                             <div className="flex-1 space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 ml-2">기사님 성함/연락처</label>
-                                <input placeholder="예: 홍길동 010-1234-5678" value={resData.driver_name} className="w-full p-4 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setResData({...resData, driver_name: e.target.value})} />
+                                <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Driver Info</label>
+                                <input placeholder="예: 홍길동 010-1234-5678" value={resData.driver_name} className="w-full p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-inner" onChange={e => setResData({...resData, driver_name: e.target.value})} />
                             </div>
                             <div className="flex-1 space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 ml-2">운임료</label>
-                                <input placeholder="예: 250,000" value={resData.fee} className="w-full p-4 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setResData({...resData, fee: e.target.value})} />
+                                <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Settlement</label>
+                                <input placeholder="예: 250,000" value={resData.fee} className="w-full p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-inner text-blue-600" onChange={e => setResData({...resData, fee: e.target.value})} />
                             </div>
-                            <button onClick={() => handleResponseSubmit(item.id)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-lg hover:bg-black transition-all">
-                              배차 정보 저장 🚀
+                            <button onClick={() => handleResponseSubmit(item.id)} className="px-10 py-5 bg-blue-600 text-white rounded-[1.5rem] font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase text-sm">
+                              Save 🚀
                             </button>
                           </div>
                         </div>
@@ -224,70 +231,97 @@ export default function TruckPage() {
         </table>
       </div>
 
-      {/* 신규 배차 신청 모달 (기존 코드 유지) */}
+      {/* 신규 배차 신청 모달 */}
       {showOrderModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex justify-end p-4 z-50">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 overflow-y-auto relative animate-in slide-in-from-right duration-300">
-            <button onClick={() => setShowOrderModal(false)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-600 text-2xl font-bold">✕</button>
-            <h2 className="text-2xl font-black italic mb-8 uppercase text-slate-800 underline decoration-orange-500 underline-offset-8">{selectedOrder ? 'Edit' : 'New'} Request</h2>
+        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50">
+          <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto relative animate-in slide-in-from-right duration-300">
+            <button onClick={() => setShowOrderModal(false)} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black">✕</button>
+            <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter italic">
+              {selectedOrder ? 'Edit' : 'New'} <span className="text-blue-600">Dispatch</span>
+            </h2>
             <div className="space-y-6">
-              <div className="bg-slate-50 p-6 rounded-3xl space-y-4">
-                <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm">
+              <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-4 shadow-inner">
+                <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm">
                   {['당일배차', '예약배차'].map(t => (
-                    <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${orderType === t ? 'bg-orange-500 text-white shadow-md' : 'text-slate-400'}`}>{t}</button>
+                    <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${orderType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>{t}</button>
                   ))}
                 </div>
                 {orderType === '예약배차' && (
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="date" value={formData.loading_date} className="p-3 rounded-xl border-none font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, loading_date: e.target.value})} />
-                    <input type="date" value={formData.unloading_date} className="p-3 rounded-xl border-none font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
+                    <input type="date" value={formData.loading_date} className="p-4 rounded-2xl border-none font-bold text-sm shadow-sm outline-none" onChange={e => setFormData({...formData, loading_date: e.target.value})} />
+                    <input type="date" value={formData.unloading_date} className="p-4 rounded-2xl border-none font-bold text-sm shadow-sm outline-none" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
                   </div>
                 )}
               </div>
-              <section className="space-y-3">
-                <p className="text-[10px] font-black text-slate-400 ml-2 uppercase">Loading Point</p>
+              
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 ml-2">
+                    <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Point</p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <select onChange={e => autoFillLoading(e.target.value)} className="p-4 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-sm outline-none">
+                  <select onChange={e => autoFillLoading(e.target.value)} className="p-5 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-inner outline-none">
                     <option value="">상차지 선택</option>
                     <option value="manual">✏️ 직접 입력</option>
                     {bookmarks.filter(b => b.type === '상차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
                   </select>
-                  <select value={formData.loading_manager} onChange={e => handleStaffChange(e.target.value)} className="p-4 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-sm text-orange-600 outline-none">
+                  <select value={formData.loading_manager} onChange={e => handleStaffChange(e.target.value)} className="p-5 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-inner text-blue-600 outline-none">
                     <option value="">담당자 선택</option>
                     <option value="manual">✏️ 직접 입력</option>
                     {staffs.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                   </select>
                 </div>
-                <input value={formData.loading_place} placeholder="상차지 명칭" className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, loading_place: e.target.value})} />
-                <div className="grid grid-cols-2 gap-2 text-orange-600 font-black">
-                  <input value={formData.loading_manager} placeholder="상차 담당자" className="p-4 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-sm" onChange={e => setFormData({...formData, loading_manager: e.target.value})} />
-                  <input value={formData.loading_phone} placeholder="연락처" className="p-4 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-sm" onChange={e => setFormData({...formData, loading_phone: e.target.value})} />
+                <input value={formData.loading_place} placeholder="상차지 명칭" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" onChange={e => setFormData({...formData, loading_place: e.target.value})} />
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={formData.loading_manager} placeholder="상차 담당자" className="p-5 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-inner text-blue-600" onChange={e => setFormData({...formData, loading_manager: e.target.value})} />
+                  <input value={formData.loading_phone} placeholder="연락처" className="p-5 bg-slate-50 rounded-2xl font-bold text-sm border-none shadow-inner text-blue-600" onChange={e => setFormData({...formData, loading_phone: e.target.value})} />
                 </div>
-                <input value={formData.loading_address} placeholder="상차지 주소" className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, loading_address: e.target.value})} />
+                <input value={formData.loading_address} placeholder="상차지 주소" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" onChange={e => setFormData({...formData, loading_address: e.target.value})} />
               </section>
+
               {[1, 2].map(num => (
-                <section key={num} className="space-y-3 p-4 bg-slate-50 rounded-[2rem] shadow-inner">
-                  <p className="text-[10px] font-black text-slate-400 ml-2 uppercase tracking-widest">Unloading {num}</p>
-                  <select onChange={e => autoFillUnloading(e.target.value, num)} className="w-full p-4 bg-white rounded-2xl font-bold text-sm border-none shadow-sm outline-none">
+                <section key={num} className="space-y-4 p-6 bg-slate-50 rounded-[2.5rem] shadow-inner">
+                  <div className="flex items-center gap-2 ml-2">
+                    <div className="w-1.5 h-4 bg-blue-600/40 rounded-full"></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unloading Point {num}</p>
+                  </div>
+                  <select onChange={e => autoFillUnloading(e.target.value, num)} className="w-full p-5 bg-white rounded-2xl font-bold text-sm border-none shadow-sm outline-none">
                     <option value="">하차지 {num} 즐겨찾기</option>
                     <option value="manual">✏️ 직접 입력</option>
                     {bookmarks.filter(b => b.type === '하차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
                   </select>
-                  <input value={num === 1 ? formData.unloading_place : formData.unloading_place_2} placeholder={`하차지 ${num} 명칭`} className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_place' : 'unloading_place_2']: e.target.value})} />
-                  <div className="grid grid-cols-2 gap-2 font-black">
-                    <input value={num === 1 ? formData.unloading_manager : formData.unloading_manager_2} placeholder="하차 담당자" className="p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_manager' : 'unloading_manager_2']: e.target.value})} />
-                    <input value={num === 1 ? formData.unloading_phone : formData.unloading_phone_2} placeholder="연락처" className="p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_phone' : 'unloading_phone_2']: e.target.value})} />
+                  <input value={num === 1 ? formData.unloading_place : formData.unloading_place_2} placeholder={`하차지 ${num} 명칭`} className="w-full p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_place' : 'unloading_place_2']: e.target.value})} />
+                  <div className="grid grid-cols-2 gap-3 font-black">
+                    <input value={num === 1 ? formData.unloading_manager : formData.unloading_manager_2} placeholder="하차 담당자" className="p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_manager' : 'unloading_manager_2']: e.target.value})} />
+                    <input value={num === 1 ? formData.unloading_phone : formData.unloading_phone_2} placeholder="연락처" className="p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_phone' : 'unloading_phone_2']: e.target.value})} />
                   </div>
-                  <input value={num === 1 ? formData.unloading_address : formData.unloading_address_2} placeholder={`하차지 ${num} 주소`} className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_address' : 'unloading_address_2']: e.target.value})} />
+                  <input value={num === 1 ? formData.unloading_address : formData.unloading_address_2} placeholder={`하차지 ${num} 주소`} className="w-full p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_address' : 'unloading_address_2']: e.target.value})} />
                 </section>
               ))}
-              <input value={formData.product_name} placeholder="📦 제품명" className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, product_name: e.target.value})} />
-              <div className="grid grid-cols-2 gap-4">
-                <input value={formData.loading_time} placeholder="⏰ 상차시간" className="p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
-                <input value={formData.unloading_time} placeholder="⏰ 하차시간" className="p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
-              </div>
-              <textarea value={formData.remarks} placeholder="📝 비고" className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm shadow-sm h-24" onChange={e => setFormData({...formData, remarks: e.target.value})} />
-              <button onClick={handleOrderSubmit} className="w-full mt-10 p-6 bg-slate-900 text-white rounded-[2.5rem] font-black text-xl shadow-xl hover:bg-black transition-all">신청 내용 저장 🚀</button>
+
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 ml-2">
+                    <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo Detail</p>
+                </div>
+                <input value={formData.product_name} placeholder="📦 제품명 (예: 반도체 장비)" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" onChange={e => setFormData({...formData, product_name: e.target.value})} />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 ml-4 uppercase">Loading Time</p>
+                        <input value={formData.loading_time} placeholder="⏰ 상차시간" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner text-blue-600" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 ml-4 uppercase">Unloading Time</p>
+                        <input value={formData.unloading_time} placeholder="⏰ 하차시간" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner text-blue-600" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
+                    </div>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 ml-4 uppercase">Remarks</p>
+                    <textarea value={formData.remarks} placeholder="📝 비고" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner h-32" onChange={e => setFormData({...formData, remarks: e.target.value})} />
+                </div>
+              </section>
+
+              <button onClick={handleOrderSubmit} className="w-full mt-10 p-6 bg-blue-600 text-white rounded-[2.5rem] font-black text-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest italic">Save Request 🚀</button>
             </div>
           </div>
         </div>
