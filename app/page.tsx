@@ -113,7 +113,7 @@ useEffect(() => {
 
         {/* 사고 접수 */}
         {(role === 'admin' || role === 'accident_manager') && (
-          <Link href="/accidents" className="p-10 bg-white rounded-[3rem] shadow-sm border border-slate-50 group hover:shadow-2xl hover:-translate-y-2 transition-all">
+          <Link href="/accident" className="p-10 bg-white rounded-[3rem] shadow-sm border border-slate-50 group hover:shadow-2xl hover:-translate-y-2 transition-all">
             <div className="flex justify-between items-start mb-8">
               <div className="bg-red-50 p-5 rounded-3xl text-3xl group-hover:scale-110 transition-all">⚠️</div>
               <span className="bg-red-100 text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Accident</span>
@@ -125,7 +125,7 @@ useEffect(() => {
 
         {/* 파렛트 관리 */}
         {role === 'admin' && (
-          <Link href="/pallets" className="p-10 bg-white rounded-[3rem] shadow-sm border border-slate-50 group hover:shadow-2xl hover:-translate-y-2 transition-all">
+          <Link href="/pallet" className="p-10 bg-white rounded-[3rem] shadow-sm border border-slate-50 group hover:shadow-2xl hover:-translate-y-2 transition-all">
             <div className="flex justify-between items-start mb-8">
               <div className="bg-slate-50 p-5 rounded-3xl text-3xl group-hover:scale-110 transition-all">📦</div>
               <span className="bg-slate-100 text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Pallet</span>
@@ -137,7 +137,7 @@ useEffect(() => {
 
         {/* 착불 관리 */}
         {role === 'admin' && (
-          <Link href="/payments" className="p-10 bg-white rounded-[3rem] shadow-sm border border-slate-50 group hover:shadow-2xl hover:-translate-y-2 transition-all">
+          <Link href="/cod" className="p-10 bg-white rounded-[3rem] shadow-sm border border-slate-50 group hover:shadow-2xl hover:-translate-y-2 transition-all">
             <div className="flex justify-between items-start mb-8">
               <div className="bg-blue-50 p-5 rounded-3xl text-3xl group-hover:scale-110 transition-all">💰</div>
               <span className="bg-blue-100 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Finance</span>
