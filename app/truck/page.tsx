@@ -1,110 +1,149 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function TruckPage() {
-  const [list, setList] = useState<any[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
-
-  const [formData, setFormData] = useState({
-    load_date: '', load_time: '', load_place: '천안센터', load_manager: '임경민 대리',
-    unload_name1: '', unload_place1: '', unload_manager1: '', unload_item1: '',
-    unload_name2: '', unload_place2: '', unload_manager2: '', unload_item2: '',
-    truck_no: '', driver_name: '', driver_phone: '', fee: 0, status: '배차요청'
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [staffs, setStaffs] = useState<any[]>([]);
+  
+  // 실제 배차 신청 시 보낼 데이터 상태
+  const [orderData, setOrderData] = useState({
+    loading_place: "",
+    loading_address: "",
+    loading_manager: "",
+    loading_phone: "",
+    unloading_place: "",
+    unloading_address: "",
+    unloading_manager: "",
+    unloading_phone: "",
+    // ... 기타 필요한 정보들
   });
 
-  const fetchTrucks = async () => {
-    const { data } = await supabase.from('trucks').select('*').order('created_at', { ascending: false });
-    setList(data || []);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    // 1. 즐겨찾기(상/하차지) 가져오기
+    const { data: bData } = await supabase.from('bookmarks').select('*');
+    setBookmarks(bData || []);
+
+    // 2. 상차 담당자(직원) 가져오기
+    const { data: sData } = await supabase.from('staff').select('*');
+    setStaffs(sData || []);
   };
 
-  useEffect(() => { fetchTrucks(); }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalStatus = formData.truck_no ? '배차완료' : '배차요청';
-    const { error } = await (editingItem 
-      ? supabase.from('trucks').update({...formData, status: finalStatus}).eq('id', editingItem.id)
-      : supabase.from('trucks').insert([{...formData, status: finalStatus}]));
-    if (error) alert("실패: " + error.message);
-    else { closeModal(); fetchTrucks(); }
+  // 상차지 선택 시 주소 자동 입력
+  const handleLoadingSelect = (placeName: string) => {
+    const selected = bookmarks.find(b => b.place_name === placeName && b.type === '상차지');
+    if (selected) {
+      setOrderData({ ...orderData, loading_place: selected.place_name, loading_address: selected.address });
+    }
   };
 
-  const openModal = (item: any = null) => {
-    if (item) { setEditingItem(item); setFormData({ ...item }); }
-    else { setEditingItem(null); setFormData({ load_date: '', load_time: '', load_place: '천안센터', load_manager: '임경민 대리', unload_name1: '', unload_place1: '', unload_manager1: '', unload_item1: '', unload_name2: '', unload_place2: '', unload_manager2: '', unload_item2: '', truck_no: '', driver_name: '', driver_phone: '', fee: 0, status: '배차요청' }); }
-    setIsModalOpen(true);
+  // 상차 담당자 선택 시 연락처 자동 입력
+  const handleStaffSelect = (staffName: string) => {
+    const selected = staffs.find(s => s.name === staffName);
+    if (selected) {
+      setOrderData({ ...orderData, loading_manager: selected.name, loading_phone: selected.phone });
+    }
   };
 
-  const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
+  // 하차지 선택 시 모든 정보(주소/담당자/번호) 자동 입력
+  const handleUnloadingSelect = (placeName: string) => {
+    const selected = bookmarks.find(b => b.place_name === placeName && b.type === '하차지');
+    if (selected) {
+      setOrderData({ 
+        ...orderData, 
+        unloading_place: selected.place_name, 
+        unloading_address: selected.address,
+        unloading_manager: selected.manager_name,
+        unloading_phone: selected.manager_phone
+      });
+    }
+  };
 
   return (
-    <div className="p-8 text-black bg-slate-50 min-h-screen">
-      <div className="flex justify-between items-end mb-10">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">🚚 용차 <span className="text-orange-500">배차 관리</span></h1>
-        <button onClick={() => openModal()} className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black shadow-lg">+ 배차 요청서 작성</button>
-      </div>
-      <div className="grid grid-cols-1 gap-4">
-        {list.map((item) => (
-          <div key={item.id} onClick={() => openModal(item)} className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 cursor-pointer hover:border-orange-500 transition-all flex justify-between items-center group">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black ${item.status === '배차완료' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600 animate-pulse'}`}>{item.status}</span>
-                <p className="font-black text-slate-800 text-lg">{item.load_date} [{item.load_time}]</p>
-              </div>
-              <p className="text-sm font-bold text-slate-600">🚩 하차1: {item.unload_name1} - {item.unload_place1}</p>
-              {item.unload_name2 && <p className="text-sm font-bold text-blue-500">🚩 하차2: {item.unload_name2} - {item.unload_place2}</p>}
-            </div>
-            <div className="text-right">
-              {item.truck_no ? (
-                <div className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 font-bold">
-                  <p>{item.truck_no}</p><p className="text-orange-600 text-sm">{item.fee.toLocaleString()}원</p>
-                </div>
-              ) : <p className="text-slate-300 italic text-sm font-bold pr-4">배차 대기중</p>}
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="p-8 bg-slate-50 min-h-screen font-sans">
+      <h1 className="text-2xl font-black text-slate-800 mb-8 italic">🚚 용차 배차 신청</h1>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[200]">
-          <div className="bg-white p-10 rounded-[48px] w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto border border-white/20">
-            <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 font-black text-xl font-sans">✕</button>
-            <h2 className="text-3xl font-black mb-8 italic text-slate-800">배차 요청서 상세</h2>
-            <form onSubmit={handleSubmit} className="space-y-10 text-sm font-bold">
-              <div className="space-y-4">
-                <p className="text-[10px] font-black text-blue-600 uppercase bg-blue-50 w-fit px-2 py-1 rounded">Step 1. 상차 정보</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <input required type="date" value={formData.load_date} className="bg-slate-100 p-4 rounded-2xl outline-none" onChange={e => setFormData({...formData, load_date: e.target.value})} />
-                  <input required type="text" placeholder="시간" value={formData.load_time} className="bg-slate-100 p-4 rounded-2xl outline-none" onChange={e => setFormData({...formData, load_time: e.target.value})} />
-                </div>
-                <input required type="text" placeholder="주소" value={formData.load_place} className="w-full bg-slate-100 p-4 rounded-2xl outline-none" onChange={e => setFormData({...formData, load_place: e.target.value})} />
-                <input required type="text" placeholder="담당자" value={formData.load_manager} className="w-full bg-slate-100 p-4 rounded-2xl outline-none" onChange={e => setFormData({...formData, load_manager: e.target.value})} />
-              </div>
-              <div className="space-y-4 p-8 bg-green-50/50 rounded-[40px] border border-green-100">
-                <p className="text-[10px] font-black text-green-600 uppercase bg-green-100 w-fit px-2 py-1 rounded">Step 2. 하차지 1</p>
-                <input required type="text" placeholder="업체명" value={formData.unload_name1} className="w-full p-4 rounded-2xl outline-none border border-green-100" onChange={e => setFormData({...formData, unload_name1: e.target.value})} />
-                <input required type="text" placeholder="주소" value={formData.unload_place1} className="w-full p-4 rounded-2xl outline-none border border-green-100" onChange={e => setFormData({...formData, unload_place1: e.target.value})} />
-                <input required type="text" placeholder="담당자/제품" value={formData.unload_item1} className="w-full p-4 rounded-2xl outline-none border border-green-100" onChange={e => setFormData({...formData, unload_item1: e.target.value})} />
-              </div>
-              <div className="space-y-4 p-8 bg-slate-50 rounded-[40px] border border-slate-200">
-                <p className="text-[10px] font-black text-slate-400 uppercase bg-slate-200 w-fit px-2 py-1 rounded">Step 3. 하차지 2 (선택)</p>
-                <input type="text" placeholder="업체명" value={formData.unload_name2} className="w-full p-4 rounded-2xl outline-none border border-slate-200" onChange={e => setFormData({...formData, unload_name2: e.target.value})} />
-                <input type="text" placeholder="주소" value={formData.unload_place2} className="w-full p-4 rounded-2xl outline-none border border-slate-200" onChange={e => setFormData({...formData, unload_place2: e.target.value})} />
-                <input type="text" placeholder="담당자/제품" value={formData.unload_item2} className="w-full p-4 rounded-2xl outline-none border border-slate-200" onChange={e => setFormData({...formData, unload_item2: e.target.value})} />
-              </div>
-              <div className="p-8 bg-orange-50 rounded-[40px] border border-orange-100 grid grid-cols-2 gap-4">
-                <input type="text" placeholder="차량번호" value={formData.truck_no} className="p-4 rounded-2xl outline-none border border-orange-200" onChange={e => setFormData({...formData, truck_no: e.target.value})} />
-                <input type="text" placeholder="성함" value={formData.driver_name} className="p-4 rounded-2xl outline-none border border-orange-200" onChange={e => setFormData({...formData, driver_name: e.target.value})} />
-                <input type="text" placeholder="연락처" value={formData.driver_phone} className="p-4 rounded-2xl outline-none border border-orange-200" onChange={e => setFormData({...formData, driver_phone: e.target.value})} />
-                <input type="number" placeholder="운임료" value={formData.fee} className="p-4 rounded-2xl outline-none border border-orange-200 font-black text-orange-600" onChange={e => setFormData({...formData, fee: parseInt(e.target.value) || 0})} />
-              </div>
-              <button type="submit" className="w-full bg-orange-600 py-5 rounded-3xl font-black text-white shadow-xl italic">저장하기</button>
-            </form>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* --- 상차지 섹션 --- */}
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+          <h2 className="text-lg font-black text-orange-500 mb-6 underline decoration-2 underline-offset-4">STEP 1. 상차 정보</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-[11px] font-black text-slate-400 ml-2 mb-1 block uppercase">상차지 선택</label>
+              <select 
+                className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-700"
+                onChange={(e) => handleLoadingSelect(e.target.value)}
+              >
+                <option value="">상차지를 선택하세요</option>
+                {bookmarks.filter(b => b.type === '상차지').map(b => (
+                  <option key={b.id} value={b.place_name}>{b.place_name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-black text-slate-400 ml-2 mb-1 block uppercase">상차 담당자</label>
+              <select 
+                className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-700"
+                onChange={(e) => handleStaffSelect(e.target.value)}
+              >
+                <option value="">담당자를 선택하세요</option>
+                {staffs.map(s => (
+                  <option key={s.id} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 자동 입력된 결과 확인창 (수정 가능하게 input으로) */}
+            <div className="pt-4 border-t border-slate-50 mt-4 space-y-2">
+              <input value={orderData.loading_address} readOnly className="w-full p-3 bg-white text-xs text-slate-400 border border-slate-100 rounded-xl" placeholder="상차지 주소 (자동입력)" />
+              <input value={orderData.loading_phone} readOnly className="w-full p-3 bg-white text-xs text-slate-400 border border-slate-100 rounded-xl" placeholder="담당자 연락처 (자동입력)" />
+            </div>
           </div>
         </div>
-      )}
+
+        {/* --- 하차지 섹션 --- */}
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+          <h2 className="text-lg font-black text-blue-500 mb-6 underline decoration-2 underline-offset-4">STEP 2. 하차 정보</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-[11px] font-black text-slate-400 ml-2 mb-1 block uppercase">하차지(거래처) 선택</label>
+              <select 
+                className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-700"
+                onChange={(e) => handleUnloadingSelect(e.target.value)}
+              >
+                <option value="">하차지를 선택하세요</option>
+                {bookmarks.filter(b => b.type === '하차지').map(b => (
+                  <option key={b.id} value={b.place_name}>{b.place_name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pt-4 border-t border-slate-50 mt-4 space-y-2">
+              <input value={orderData.unloading_address} readOnly className="w-full p-3 bg-white text-xs text-slate-400 border border-slate-100 rounded-xl" placeholder="하차지 주소 (자동입력)" />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={orderData.unloading_manager} readOnly className="p-3 bg-white text-xs text-slate-400 border border-slate-100 rounded-xl" placeholder="담당자 (자동)" />
+                <input value={orderData.unloading_phone} readOnly className="p-3 bg-white text-xs text-slate-400 border border-slate-100 rounded-xl" placeholder="연락처 (자동)" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button className="w-full mt-10 p-6 bg-slate-900 text-white rounded-[2rem] font-black text-xl shadow-xl hover:bg-slate-800 transition-all">
+        배차 신청하기 🚀
+      </button>
     </div>
   );
 }
