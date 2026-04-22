@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <span className="text-xl group-hover:scale-110">🏠</span> <span>대시보드</span>
                 </Link>
                 <Link href="/pallet" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
-                  <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 재고</span>
+                  <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 전표</span>
                 </Link>
               </>
             )}
@@ -101,7 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mt-auto space-y-4">
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[9px] font-black text-slate-400 uppercase">관리자</p>
-              <p className="text-sm font-bold text-slate-900 mt-1 tracking-tight">천안센터</p>
+              <p className="text-sm font-bold text-slate-900 mt-1 tracking-tight">천안센터 / 임경민 대리</p>
             </div>
             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl font-bold text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100">
               <span>🚪</span> <span className="text-sm">로그아웃</span>
