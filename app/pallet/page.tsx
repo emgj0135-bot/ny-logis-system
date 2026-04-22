@@ -85,15 +85,29 @@ export default function PalletsPage() {
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-black flex items-center gap-2 italic">
-          📦 <span className="text-orange-500">PALLET</span> CONTROL
-        </h1>
-        <button onClick={() => setShowModal(true)} className="bg-[#1a1c2e] text-white px-7 py-3 rounded-2xl font-black shadow-lg hover:scale-105 transition-all text-sm">
+      
+      {/* 🔵 블루 포인트 헤더 섹션 (수정된 부분) */}
+      <div className="flex justify-between items-center mb-10">
+        <div className="flex items-center gap-4">
+          <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
+              PALLET <span className="text-blue-600">CONTROL</span>
+            </h1>
+            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
+              천안센터 <span className="text-blue-600/60 font-black">파렛트 전표 관리 시스템</span>
+            </p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setShowModal(true)} 
+          className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all text-sm"
+        >
           + 신규 전표 등록
         </button>
       </div>
 
+      {/* 리스트 테이블 섹션 (기본 구조 유지) */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
@@ -146,7 +160,7 @@ export default function PalletsPage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="bg-white w-full max-w-md rounded-[3.5rem] shadow-2xl p-12 animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-md rounded-[3.5rem] shadow-2xl p-12 animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-black mb-8 italic text-slate-800">{isEdit ? 'EDIT SLIP' : 'NEW SLIP'}</h2>
             <div className="space-y-5">
               <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
