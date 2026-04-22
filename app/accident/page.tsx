@@ -46,7 +46,7 @@ export default function AccidentPage() {
           
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-              ACCIDENT <span className="text-blue-600">CENTER</span>
+              사고 <span className="text-blue-600">접수</span>
             </h1>
             <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
               천안센터 <span className="text-red-500 font-black">실시간 사고 접수 및 변상 관리</span>
