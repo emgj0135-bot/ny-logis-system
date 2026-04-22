@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <span className="text-xl group-hover:scale-110">🏠</span> <span>대시보드</span>
                 </Link>
                 <Link href="/pallet" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
-                  <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 재고</span>
+                  <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 전표</span>
                 </Link>
               </>
             )}
