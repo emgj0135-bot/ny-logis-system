@@ -179,71 +179,89 @@ export default function TruckPage() {
                       <td colSpan={5} className="p-8 animate-in slide-in-from-top-2">
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
                           
-                          {/* 💡 요청 정보 정밀 요약 박스 (갱미가 요청한 7가지 정보) */}
-                          <div className="bg-blue-50 p-8 rounded-[2.5rem] mb-8 border border-blue-100">
-                            <div className="flex justify-between items-start mb-6">
-                              <div>
-                                <p className="text-[10px] font-black text-blue-400 uppercase mb-2 tracking-widest">Order Summary</p>
-                                <div className="flex items-center gap-3">
-                                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${item.order_type === '당일배차' ? 'bg-blue-600 text-white' : 'bg-purple-600 text-white'}`}>
-                                    {item.order_type}
-                                  </span>
-                                  <h3 className="text-2xl font-black text-slate-800 tracking-tight">
-                                    {item.loading_place} <span className="text-blue-600 mx-1">→</span> {item.unloading_place}
-                                    {item.unloading_place_2 && <span className="text-blue-400 mx-1">→ {item.unloading_place_2}</span>}
-                                  </h3>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-blue-50">
-                                <span className="text-[10px] font-black text-slate-400 uppercase">Status</span>
-                                <select 
-                                  className="bg-slate-100 border-none rounded-xl px-4 py-2 font-black text-xs shadow-inner outline-none text-blue-600"
-                                  value={resData.status}
-                                  onChange={(e) => setResData({...resData, status: e.target.value})}
-                                >
-                                  <option value="신청완료">🟠 신청완료</option>
-                                  <option value="배차완료">🟢 배차완료</option>
-                                </select>
-                              </div>
-                            </div>
+                          {/* 💡 요청 정보 정밀 요약 박스 (하차지 1, 2 완벽 대응 버전) */}
+<div className="bg-blue-50 p-8 rounded-[2.5rem] mb-8 border border-blue-100">
+  <div className="flex justify-between items-start mb-6">
+    <div>
+      <p className="text-[10px] font-black text-blue-400 uppercase mb-2 tracking-widest">Order Summary</p>
+      <div className="flex items-center gap-3">
+        <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${item.order_type === '당일배차' ? 'bg-blue-600 text-white' : 'bg-purple-600 text-white'}`}>
+          {item.order_type}
+        </span>
+        <h3 className="text-2xl font-black text-slate-800 tracking-tight">
+          {item.loading_place} <span className="text-blue-600 mx-1">→</span> {item.unloading_place}
+          {item.unloading_place_2 && <span className="text-blue-400 mx-1">→ {item.unloading_place_2}</span>}
+        </h3>
+      </div>
+    </div>
+    <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-blue-50">
+      <span className="text-[10px] font-black text-slate-400 uppercase">Status</span>
+      <select 
+        className="bg-slate-100 border-none rounded-xl px-4 py-2 font-black text-xs shadow-inner outline-none text-blue-600"
+        value={resData.status}
+        onChange={(e) => setResData({...resData, status: e.target.value})}
+      >
+        <option value="신청완료">🟠 신청완료</option>
+        <option value="배차완료">🟢 배차완료</option>
+      </select>
+    </div>
+  </div>
 
-                            <div className="grid grid-cols-2 gap-8 border-t border-blue-100 pt-6">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
-                                  <p className="text-[11px] font-black text-slate-400 uppercase">Loading Point</p>
-                                </div>
-                                <p className="text-sm font-black text-slate-700">{item.loading_place} <span className="text-blue-600 ml-2">{item.loading_time} 상차</span></p>
-                                <p className="text-xs font-bold text-slate-500 leading-relaxed">{item.loading_address}</p>
-                                <p className="text-xs font-black text-blue-600 bg-blue-100/50 w-fit px-2 py-1 rounded-md">담당: {item.loading_manager} ({item.loading_phone})</p>
-                              </div>
-                              <div className="space-y-2 border-l border-blue-100 pl-8">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
-                                  <p className="text-[11px] font-black text-slate-400 uppercase">Unloading Point</p>
-                                </div>
-                                <p className="text-sm font-black text-slate-700">{item.unloading_place} <span className="text-slate-400 ml-2">{item.unloading_time} 하차</span></p>
-                                <p className="text-xs font-bold text-slate-500 leading-relaxed">{item.unloading_address}</p>
-                                <p className="text-xs font-black text-slate-600 bg-slate-100 w-fit px-2 py-1 rounded-md">담당: {item.unloading_manager} ({item.unloading_phone})</p>
-                              </div>
-                            </div>
+  {/* 상하차 상세 정보 그리드 */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-blue-100 pt-6">
+    {/* 상차지 정보 (고정) */}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
+        <p className="text-[11px] font-black text-slate-400 uppercase">Loading Point</p>
+      </div>
+      <p className="text-sm font-black text-slate-700">{item.loading_place} <span className="text-blue-600 ml-2">{item.loading_time} 상차</span></p>
+      <p className="text-xs font-bold text-slate-500 leading-relaxed">{item.loading_address}</p>
+      <p className="text-xs font-black text-blue-600 bg-blue-100/50 w-fit px-2 py-1 rounded-md">담당: {item.loading_manager} ({item.loading_phone})</p>
+    </div>
 
-                            <div className="mt-6 pt-4 border-t border-blue-100 flex items-center justify-between">
-                              <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase">Product:</p>
-                                  <p className="text-sm font-black text-slate-800">📦 {item.product_name}</p>
-                                </div>
-                                {item.remarks && (
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase">Memo:</p>
-                                    <p className="text-sm font-bold text-red-500">{item.remarks}</p>
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-[10px] font-black text-blue-300 italic">NY LOGIS DISPATCH FORM</p>
-                            </div>
-                          </div>
+    {/* 하차지 정보 (1과 2가 있을 경우 모두 표시) */}
+    <div className="space-y-6 border-l border-blue-100 pl-8">
+      {[1, 2].map(num => {
+        const place = num === 1 ? item.unloading_place : item.unloading_place_2;
+        const address = num === 1 ? item.unloading_address : item.unloading_address_2;
+        const manager = num === 1 ? item.unloading_manager : item.unloading_manager_2;
+        const phone = num === 1 ? item.unloading_phone : item.unloading_phone_2;
+        const product = num === 1 ? item.product_name : item.product_name_2;
+
+        if (!place) return null; // 하차지 2가 없으면 렌더링 안 함
+
+        return (
+          <div key={num} className={`space-y-2 ${num === 2 ? 'pt-4 border-t border-dashed border-blue-100' : ''}`}>
+            <div className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${num === 1 ? 'bg-slate-400' : 'bg-purple-400'}`}></span>
+              <p className="text-[11px] font-black text-slate-400 uppercase">Unloading Point {num}</p>
+            </div>
+            <p className="text-sm font-black text-slate-700">{place} <span className="text-slate-400 ml-2">{item.unloading_time} 하차</span></p>
+            <p className="text-xs font-bold text-slate-500 leading-relaxed">{address}</p>
+            <div className="flex flex-wrap gap-2">
+              <p className="text-xs font-black text-slate-600 bg-slate-100 px-2 py-1 rounded-md">담당: {manager} ({phone})</p>
+              <p className="text-xs font-black text-white bg-blue-500 px-2 py-1 rounded-md">📦 {product}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  {/* 하단 메모 섹션 */}
+  <div className="mt-6 pt-4 border-t border-blue-100 flex items-center justify-between">
+    <div className="flex items-center gap-6">
+      {item.remarks && (
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase">Memo:</p>
+          <p className="text-sm font-bold text-red-500">{item.remarks}</p>
+        </div>
+      )}
+    </div>
+    <p className="text-[10px] font-black text-blue-300 italic">NY LOGIS DISPATCH FORM</p>
+  </div>
+</div>
 
                           {/* 기사 정보 입력란 */}
                           <div className="flex gap-4 w-full items-end bg-slate-50 p-6 rounded-3xl">
