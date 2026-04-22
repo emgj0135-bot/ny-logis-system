@@ -298,7 +298,7 @@ export default function TruckPage() {
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto relative animate-in slide-in-from-right duration-300">
             <button onClick={() => setShowOrderModal(false)} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black">✕</button>
             <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter italic">
-              {selectedOrder ? 'Edit' : '신규'} <span className="text-blue-600">배차</span>
+              {selectedOrder ? '신규' : '신규'} <span className="text-blue-600">배차</span>
             </h2>
             <div className="space-y-6 font-black">
               <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-4 shadow-inner">
