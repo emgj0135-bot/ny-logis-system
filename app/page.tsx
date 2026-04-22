@@ -69,7 +69,7 @@ useEffect(() => {
     
     <div>
       <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase leading-none">
-        NY LOGIS <span className="text-blue-600">DASHBOARD</span>
+        NY LOGIS <span className="text-blue-600">대시보드</span>
       </h1>
       <p className="text-slate-400 font-bold mt-2 tracking-tight text-sm">
         천안센터 <span className="text-slate-600">{role === 'admin' ? '관리자용' : '파트너용'}</span> 실시간 현황판입니다.
@@ -121,7 +121,7 @@ useEffect(() => {
               <div className="bg-orange-50 p-5 rounded-3xl text-3xl group-hover:scale-110 transition-all">🚚</div>
               <span className="bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Dispatch</span>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-3">용차 배차관리</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-3">용차 배차</h2>
             <p className="text-sm text-slate-400 font-bold leading-relaxed">배차 진행 상황 확인 및 기사 정보를 등록하세요.</p>
           </Link>
         )}
@@ -133,7 +133,7 @@ useEffect(() => {
               <div className="bg-red-50 p-5 rounded-3xl text-3xl group-hover:scale-110 transition-all">⚠️</div>
               <span className="bg-red-100 text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Accident</span>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-3">사고 접수센터</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-3">사고 접수</h2>
             <p className="text-sm text-slate-400 font-bold leading-relaxed">사고 내역 확인 및 처리 상태를 실시간 관리합니다.</p>
           </Link>
         )}
@@ -157,7 +157,7 @@ useEffect(() => {
               <div className="bg-blue-50 p-5 rounded-3xl text-3xl group-hover:scale-110 transition-all">💰</div>
               <span className="bg-blue-100 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Finance</span>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-3">착불 정산관리</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-3">착불 입고</h2>
             <p className="text-sm text-slate-400 font-bold leading-relaxed">미수금 정산 및 업체별 입금 내역을 확인합니다.</p>
           </Link>
         )}
