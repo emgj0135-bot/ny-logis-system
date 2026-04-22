@@ -30,7 +30,10 @@ export default function DashboardPage() {
       const { count: pCount } = await supabase.from('pallets').select('*', { count: 'exact', head: true }).eq('status', '미확인');
       const { count: tCount } = await supabase.from('truck_orders').select('*', { count: 'exact', head: true }).eq('status', '신청완료');
       const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '접수완료');
-      const { count: payCount } = await supabase.from('cod_manage') // 테이블 이름 확인!.select('*', { count: 'exact', head: true }).eq('status', '미확인');
+      const { count: payCount } = await supabase
+  .from('cod_manage') // 테이블 이름 확인!
+  .select('*', { count: 'exact', head: true })
+  .eq('status', '미확인');
 
       setStats({
         pallet: pCount || 0,
