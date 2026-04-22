@@ -51,7 +51,7 @@ export default function DashboardPage() {
       {/* 1. 상단 요약 카드 (숫자가 보이는 곳!) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <p className="text-[11px] font-black text-slate-400 uppercase mb-1">파렛트 재고</p>
+          <p className="text-[11px] font-black text-slate-400 uppercase mb-1">파렛트 전표</p>
           <p className="text-3xl font-black text-slate-900">{stats.pallet}<span className="text-sm ml-1 text-slate-400">개</span></p>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-start mb-6">
               <div className="bg-slate-50 p-4 rounded-2xl text-2xl">📦</div>
             </div>
-            <h2 className="text-xl font-black text-slate-800 mb-2">파렛트 재고관리</h2>
+            <h2 className="text-xl font-black text-slate-800 mb-2">파렛트 전표관리</h2>
             <p className="text-sm text-slate-500 font-medium leading-relaxed">천안센터 내 전체 파렛트 입출고 데이터를 제어합니다.</p>
           </div>
         )}
