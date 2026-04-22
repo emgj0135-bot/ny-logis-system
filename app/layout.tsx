@@ -75,7 +75,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
     <span className="text-xl">⚠️</span> <span>사고 접수</span>
   </Link>
+
+  {/* layout.tsx의 메뉴 리스트 부분에 추가 */}
+<Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+  <span className="text-xl">📌</span> <span>즐겨찾기</span>
+</Link>
 )}
+            
           </div>
 
           <div className="mt-auto space-y-4">
