@@ -165,7 +165,7 @@ export default function TruckPage() {
                       <p className="text-[11px] text-slate-400 mt-1 font-bold">📦 {item.product_name} | {item.loading_time} 상차</p>
                     </td>
                     <td className="p-5 text-center">
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-full ${item.status === '배차완료' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>{item.status}</span>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>{item.status}</span>
                     </td>
                     <td className="p-5 text-center">
                       <div className="flex gap-2 justify-center font-black text-[10px]">
