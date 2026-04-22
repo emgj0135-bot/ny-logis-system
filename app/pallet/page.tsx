@@ -158,35 +158,80 @@ export default function PalletsPage() {
         </table>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="bg-white w-full max-md rounded-[3.5rem] shadow-2xl p-12 animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-black mb-8 italic text-slate-800">{isEdit ? 'EDIT SLIP' : 'NEW SLIP'}</h2>
-            <div className="space-y-5">
-              <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
-                {['출고', '입고'].map(t => (
-                  <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
-                ))}
-              </div>
-              <input placeholder="업체명" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="KPP 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm" value={formData.kpp_count} onChange={e => setFormData({...formData, kpp_count: e.target.value})} />
-                <input placeholder="KPP 번호" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px]" value={formData.kpp_number} onChange={e => setFormData({...formData, kpp_number: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="AJ 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm" value={formData.aj_count} onChange={e => setFormData({...formData, aj_count: e.target.value})} />
-                <input placeholder="AJ 업체/번호" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px]" value={formData.aj_name} onChange={e => setFormData({...formData, aj_name: e.target.value})} />
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={handleSubmit} className="flex-1 bg-[#1a1c2e] text-white p-5 rounded-[1.5rem] font-black shadow-xl hover:bg-black transition-all">
-                  {isEdit ? '수정하기' : '등록하기'}
-                </button>
-                <button onClick={closeModal} className="bg-slate-100 text-slate-400 px-6 rounded-[1.5rem] font-black">취소</button>
-              </div>
-            </div>
-          </div>
+     {showModal && (
+  <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
+    {/* max-w-md로 너비를 제한하고 p-8로 내부 여백을 최적화했어 */}
+    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+      {/* italic 제거 */}
+      <h2 className="text-xl font-black mb-6 text-slate-800">{isEdit ? 'EDIT SLIP' : '신규 전표'}</h2>
+      
+      <div className="space-y-4">
+        <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
+          {['출고', '입고'].map(t => (
+            <button 
+              key={t} 
+              onClick={() => setFormData({...formData, type: t})} 
+              className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
-      )}
+
+        <input 
+          placeholder="업체명" 
+          className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none" 
+          value={formData.company_name} 
+          onChange={e => setFormData({...formData, company_name: e.target.value})} 
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <input 
+            placeholder="KPP 수량" 
+            className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none" 
+            value={formData.kpp_count} 
+            onChange={e => setFormData({...formData, kpp_count: e.target.value})} 
+          />
+          <input 
+            placeholder="KPP 번호" 
+            className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px] outline-none" 
+            value={formData.kpp_number} 
+            onChange={e => setFormData({...formData, kpp_number: e.target.value})} 
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <input 
+            placeholder="AJ 수량" 
+            className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none" 
+            value={formData.aj_count} 
+            onChange={e => setFormData({...formData, aj_count: e.target.value})} 
+          />
+          <input 
+            placeholder="AJ 업체/번호" 
+            className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px] outline-none" 
+            value={formData.aj_name} 
+            onChange={e => setFormData({...formData, aj_name: e.target.value})} 
+          />
+        </div>
+
+        <div className="flex gap-3 mt-4">
+          <button 
+            onClick={handleSubmit} 
+            className="flex-1 bg-[#1a1c2e] text-white p-4 rounded-[1.2rem] font-black shadow-lg hover:bg-black transition-all text-sm"
+          >
+            {isEdit ? '수정하기' : '등록하기'}
+          </button>
+          <button 
+            onClick={closeModal} 
+            className="bg-slate-100 text-slate-400 px-6 rounded-[1.2rem] font-black text-sm"
+          >
+            취소
+          </button>
+        </div>
+      </div>
     </div>
+  </div>
+)}    </div>
   );
 }
