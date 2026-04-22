@@ -275,7 +275,7 @@ export default function TruckPage() {
                                   </div>
                                 )}
                               </div>
-                              <p className="text-[10px] font-black text-blue-300 italic">NY LOGIS DISPATCH FORM</p>
+                              <p className="text-[10px] font-black text-blue-300 ">NY LOGIS</p>
                             </div>
                           </div>
 
@@ -294,7 +294,7 @@ export default function TruckPage() {
                                 <input placeholder="예: 250,000" value={resData.fee} className="w-full p-5 bg-white rounded-2xl border-none font-bold text-sm shadow-inner text-blue-600 outline-none" onChange={e => setResData({...resData, fee: e.target.value})} />
                             </div>
                             <button onClick={() => handleResponseSubmit(item.id)} className="px-10 py-5 bg-blue-600 text-white rounded-[1.5rem] font-black shadow-xl hover:bg-blue-700 transition-all uppercase text-sm">
-                              Save 🚀
+                              저 🚀
                             </button>
                           </div>
                         </div>
@@ -313,7 +313,7 @@ export default function TruckPage() {
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto relative animate-in slide-in-from-right duration-300">
             <button onClick={() => { setShowOrderModal(false); setSelectedOrder(null); }} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black">✕</button>
-            <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter italic">
+            <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter">
               {selectedOrder ? '배차 수정' : '신규 배차'}
             </h2>
             <div className="space-y-6 font-black">
@@ -394,8 +394,8 @@ export default function TruckPage() {
                 </div>
               </section>
 
-              <button onClick={handleOrderSubmit} className="w-full mt-10 p-6 bg-blue-600 text-white rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest italic">
-                {selectedOrder ? 'Update Request 💾' : 'Save Request 🚀'}
+              <button onClick={handleOrderSubmit} className="w-full mt-10 p-6 bg-blue-600 text-white rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest">
+                {selectedOrder ? '수정 완료 💾' : '신규 배차 저장 🚀'}
               </button>
             </div>
           </div>
