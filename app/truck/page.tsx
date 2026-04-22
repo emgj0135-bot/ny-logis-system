@@ -323,49 +323,60 @@ export default function TruckPage() {
               </section>
 
               {[1, 2].map(num => (
-                <section key={num} className="space-y-4 p-6 bg-slate-50 rounded-[2.5rem] shadow-inner">
-                  <div className="flex items-center gap-2 ml-2">
-                    <div className="w-1.5 h-4 bg-blue-600/40 rounded-full"></div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">Unloading Point {num}</p>
-                  </div>
-                  <select onChange={e => autoFillUnloading(e.target.value, num)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none">
-                    <option value="">하차지 {num} 즐겨찾기</option>
-                    <option value="manual">✏️ 직접 입력</option>
-                    {bookmarks.filter(b => b.type === '하차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
-                  </select>
-                  <input value={num === 1 ? formData.unloading_place : formData.unloading_place_2} placeholder={`하차지 ${num} 명칭`} className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_place' : 'unloading_place_2']: e.target.value})} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input value={num === 1 ? formData.unloading_manager : formData.unloading_manager_2} placeholder="하차 담당자" className="p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_manager' : 'unloading_manager_2']: e.target.value})} />
-                    <input value={num === 1 ? formData.unloading_phone : formData.unloading_phone_2} placeholder="연락처" className="p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_phone' : 'unloading_phone_2']: e.target.value})} />
-                  </div>
-                  <input value={num === 1 ? formData.unloading_address : formData.unloading_address_2} placeholder={`하차지 ${num} 주소`} className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_address' : 'unloading_address_2']: e.target.value})} />
-                </section>
-              ))}
+  <section key={num} className="space-y-4 p-6 bg-slate-50 rounded-[2.5rem] shadow-inner">
+    <div className="flex items-center gap-2 ml-2">
+      <div className="w-1.5 h-4 bg-blue-600/40 rounded-full"></div>
+      <p className="text-[10px] text-slate-400 uppercase tracking-widest">Unloading Point {num}</p>
+    </div>
+    
+    {/* 즐겨찾기 선택 */}
+    <select onChange={e => autoFillUnloading(e.target.value, num)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none">
+      <option value="">하차지 {num} 즐겨찾기</option>
+      <option value="manual">✏️ 직접 입력</option>
+      {bookmarks.filter(b => b.type === '하차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
+    </select>
 
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 ml-2">
-                    <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">Cargo Detail</p>
-                </div>
-                <input value={formData.product_name} placeholder="📦 제품명 (예: 반도체 장비)" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner" onChange={e => setFormData({...formData, product_name: e.target.value})} />
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <p className="text-[10px] text-slate-400 ml-4 uppercase">Loading Time</p>
-                        <input value={formData.loading_time} placeholder="⏰ 상차시간" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner text-blue-600" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-[10px] text-slate-400 ml-4 uppercase">Unloading Time</p>
-                        <input value={formData.unloading_time} placeholder="⏰ 하차시간" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner text-blue-600" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
-                    </div>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-[10px] text-slate-400 ml-4 uppercase">Remarks</p>
-                    <textarea value={formData.remarks} placeholder="📝 비고" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner h-32" onChange={e => setFormData({...formData, remarks: e.target.value})} />
-                </div>
-              </section>
+    {/* 명칭 입력 */}
+    <input value={num === 1 ? formData.unloading_place : formData.unloading_place_2} placeholder={`하차지 ${num} 명칭`} className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_place' : 'unloading_place_2']: e.target.value})} />
+    
+    {/* 담당자 및 연락처 */}
+    <div className="grid grid-cols-2 gap-3">
+      <input value={num === 1 ? formData.unloading_manager : formData.unloading_manager_2} placeholder="하차 담당자" className="p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_manager' : 'unloading_manager_2']: e.target.value})} />
+      <input value={num === 1 ? formData.unloading_phone : formData.unloading_phone_2} placeholder="연락처" className="p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_phone' : 'unloading_phone_2']: e.target.value})} />
+    </div>
 
-              <button onClick={handleOrderSubmit} className="w-full mt-10 p-6 bg-blue-600 text-white rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest italic">Save Request 🚀</button>
-            </div>
+    {/* 주소 입력 */}
+    <input value={num === 1 ? formData.unloading_address : formData.unloading_address_2} placeholder={`하차지 ${num} 주소`} className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm" onChange={e => setFormData({...formData, [num === 1 ? 'unloading_address' : 'unloading_address_2']: e.target.value})} />
+
+    {/* ✨ 추가된 제품 입력 칸 (주소 아래) */}
+    <input 
+      value={num === 1 ? formData.product_name : formData.product_name_2} 
+      placeholder={`📦 하차지 ${num} 제품명 (예: 반도체 장비)`} 
+      className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm" 
+      onChange={e => setFormData({...formData, [num === 1 ? 'product_name' : 'product_name_2']: e.target.value})} 
+    />
+  </section>
+))}
+
+{/* Cargo Detail 섹션 삭제 후 상하차 시간부터 시작 */}
+<section className="space-y-4 pt-4">
+  <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-1">
+          <p className="text-[10px] text-slate-400 ml-4 uppercase">Loading Time</p>
+          <input value={formData.loading_time} placeholder="⏰ 상차시간" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner text-blue-600" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
+      </div>
+      <div className="space-y-1">
+          <p className="text-[10px] text-slate-400 ml-4 uppercase">Unloading Time</p>
+          <input value={formData.unloading_time} placeholder="⏰ 하차시간" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner text-blue-600" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
+      </div>
+  </div>
+  <div className="space-y-1">
+      <p className="text-[10px] text-slate-400 ml-4 uppercase">Remarks</p>
+      <textarea value={formData.remarks} placeholder="📝 비고" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner h-32" onChange={e => setFormData({...formData, remarks: e.target.value})} />
+  </div>
+</section>
+
+<button onClick={handleOrderSubmit} className="w-full mt-10 p-6 bg-blue-600 text-white rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest italic">Save Request 🚀</button>            </div>
           </div>
         </div>
       )}
