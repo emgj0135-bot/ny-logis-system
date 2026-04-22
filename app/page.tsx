@@ -62,15 +62,30 @@ useEffect(() => {
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans">
       {/* 헤더 섹션 */}
-      <div className="mb-10 flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">NY LOGIS DASHBOARD</h1>
-          <p className="text-slate-400 font-bold mt-1 tracking-tight">천안센터 {role === 'admin' ? '관리자용' : '파트너용'} 실시간 현황판입니다.</p>
-        </div>
-        <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 text-[10px] font-black text-slate-400">
-           ONLINE <span className="text-green-500 ml-1">●</span>
-        </div>
-      </div>
+<div className="mb-12 flex justify-between items-center">
+  <div className="flex items-center gap-4">
+    {/* 왼쪽 파란색 포인트 기둥 */}
+    <div className="w-2 h-12 bg-blue-600 rounded-full"></div> 
+    
+    <div>
+      <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase leading-none">
+        NY LOGIS <span className="text-blue-600">DASHBOARD</span>
+      </h1>
+      <p className="text-slate-400 font-bold mt-2 tracking-tight text-sm">
+        천안센터 <span className="text-slate-600">{role === 'admin' ? '관리자용' : '파트너용'}</span> 실시간 현황판입니다.
+      </p>
+    </div>
+  </div>
+
+  {/* 온라인 상태 표시창도 좀 더 깔끔하게 다듬었어! */}
+  <div className="flex items-center gap-2 bg-white px-5 py-2.5 rounded-2xl border border-slate-100 shadow-sm text-[10px] font-black text-slate-500 tracking-widest uppercase">
+    <span className="relative flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+    </span>
+    System Online
+  </div>
+</div>
 
       {/* 1. 상단 요약 카드 (이제 진짜 숫자가 보임!) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
