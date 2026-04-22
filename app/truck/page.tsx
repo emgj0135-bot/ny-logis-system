@@ -126,7 +126,7 @@ export default function TruckPage() {
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-              TRUCK <span className="text-blue-600">DISPATCH</span>
+              용차 <span className="text-blue-600">배차</span>
             </h1>
             <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
               천안센터 <span className="text-blue-600 font-black">용차 배차 및 실시간 현황 관리</span>
@@ -165,7 +165,7 @@ export default function TruckPage() {
                       <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider">📦 {item.product_name} | {item.loading_time} 상차</p>
                     </td>
                     <td className="p-5 text-center">
-                      <span className={`text-[10px] px-4 py-1.5 rounded-full shadow-sm border ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100 animate-pulse'}`}>{item.status}</span>
+                      <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100 animate-pulse'}`}>{item.status}</span>
                     </td>
                     <td className="p-5 text-center">
                       <div className="flex gap-2 justify-center text-[10px]">
