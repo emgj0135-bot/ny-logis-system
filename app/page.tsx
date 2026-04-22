@@ -20,32 +20,42 @@ export default function DashboardPage() {
     cod: 0
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      // 1. 유저 권한 확인
-      const { data: { user } } = await supabase.auth.getUser();
-      setRole(user?.user_metadata?.role || 'user');
-      
-      // 2. 실시간 카운트 쿼리 (갱미가 요청한 조건들!)
-      const { count: pCount } = await supabase.from('pallets').select('*', { count: 'exact', head: true }).eq('status', '미확인');
-      const { count: tCount } = await supabase.from('truck_orders').select('*', { count: 'exact', head: true }).eq('status', '신청완료');
-      const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '접수완료');
-      const { count: payCount } = await supabase
-  .from('cod_manage') // 테이블 이름 확인!
-  .select('*', { count: 'exact', head: true })
-  .eq('status', '미확인');
+  // app/page.tsx
 
-      setStats({
-        pallet: pCount || 0,
-        truck: tCount || 0,
-        accident: aCount || 0,
-        cod: payCount || 0
-      });
-      
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true); // 로딩 시작
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    setRole(user?.user_metadata?.role || 'user');
+    
+    // 1. 파렛트 미확인 건수
+    const { count: pCount } = await supabase.from('pallets').select('*', { count: 'exact', head: true }).eq('status', '미확인');
+    // 2. 용차 배차대기 건수
+    const { count: tCount } = await supabase.from('truck_orders').select('*', { count: 'exact', head: true }).eq('status', '신청완료');
+    // 3. 미처리 사고 건수
+    const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '미확인');
+    // 4. 미확인 착불 건수 (우리가 방금 고친 녀석!)
+    const { count: payCount } = await supabase.from('cod_manage').select('*', { count: 'exact', head: true }).eq('status', '미확인');
+
+    setStats({
+      pallet: pCount || 0,
+      truck: tCount || 0,
+      accident: aCount || 0,
+      cod: payCount || 0
+    });
+    
+    setLoading(false);
+  };
+
+  fetchData();
+  
+  // 💡 잼민이의 꿀팁: 페이지에 다시 들어올 때마다 새로고침하게 만들고 싶다면?
+  // 브라우저 탭을 왔다갔다 할 때 숫자를 다시 세게 하려면 아래 코드를 추가해!
+  window.addEventListener('focus', fetchData);
+  return () => window.removeEventListener('focus', fetchData);
+
+}, []);
 
   if (loading) return <div className="p-8 text-slate-500 font-bold animate-pulse text-center mt-20 text-xl">🚀 NY LOGIS 데이터 로딩 중...</div>;
 
