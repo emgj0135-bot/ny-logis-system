@@ -95,10 +95,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   </Link>
 )}
 
-{/* --- 기존 즐겨찾기 메뉴 --- */}
-<Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
-  <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
-</Link>
             
           </div>
 
