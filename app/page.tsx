@@ -34,7 +34,7 @@ useEffect(() => {
     // 2. 용차 배차대기 건수
     const { count: tCount } = await supabase.from('truck_orders').select('*', { count: 'exact', head: true }).eq('status', '신청완료');
     // 3. 미처리 사고 건수
-    const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '미확인');
+    const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '접수완료');
     // 4. 미확인 착불 건수 (우리가 방금 고친 녀석!)
     const { count: payCount } = await supabase.from('cod_manage').select('*', { count: 'exact', head: true }).eq('status', '미확인');
 
