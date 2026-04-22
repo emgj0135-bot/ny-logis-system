@@ -18,11 +18,21 @@ export default function DashboardPage() {
   }, []);
 
   const fetchCounts = async () => {
-    // 1. 파렛트 전표: '미확인' 상태만 카운트
-    const { count: pCount } = await supabase
-      .from('pallets')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', '미확인');
+    // 1. // dashboard/page.tsx의 fetchCounts 함수 중 일부
+const fetchCounts = async () => {
+  // 파렛트 전표: '미확인' 상태인 것만 카운트!
+  const { count: pCount, error } = await supabase
+    .from('pallets')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', '미확인');
+
+  if (error) console.error("에러 발생:", error); // 혹시 에러 나면 로그로 확인
+
+  setCounts(prev => ({
+    ...prev,
+    pallets: pCount || 0
+  }));
+};
 
     // 2. 용차 배차: '신청완료' 상태만 카운트
     const { count: tCount } = await supabase
