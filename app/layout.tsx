@@ -18,7 +18,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const getRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      // 유저 메타데이터에서 role을 가져옴 (없으면 'user'로 기본값)
       setRole(user?.user_metadata?.role || 'user');
       setLoading(false);
     };
@@ -51,36 +50,43 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex flex-col gap-2">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-2 mb-2">메뉴</p>
             
-            {/* 관리자(admin)만 볼 수 있는 메뉴 */}
+            {/* 1. 관리자(admin)만 볼 수 있는 메뉴 */}
             {role === 'admin' && (
               <>
                 <Link href="/" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
-                  <span className="text-xl">🏠</span> <span>대시보드</span>
+                  <span className="text-xl group-hover:scale-110">🏠</span> <span>대시보드</span>
                 </Link>
                 <Link href="/pallet" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
-                  <span className="text-xl">📦</span> <span>파렛트 재고</span>
+                  <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 재고</span>
                 </Link>
               </>
             )}
 
-            {/* 용차업체(truck_vendor)와 관리자 둘 다 볼 수 있는 메뉴 */}
+            {/* 2. 용차업체(truck_vendor)와 관리자 둘 다 볼 수 있는 메뉴 */}
             {(role === 'admin' || role === 'truck_vendor') && (
               <Link href="/truck" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
-                <span className="text-xl">🚚</span> <span>용차 배차</span>
+                <span className="text-xl group-hover:scale-110">🚚</span> <span>용차 배차</span>
               </Link>
             )}
 
-            {/* 사고 접수 담당자(accident_manager) 또는 관리자(admin)만 보임 */}
-{(role === 'admin' || role === 'accident_manager') && (
-  <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
-    <span className="text-xl">⚠️</span> <span>사고 접수</span>
-  </Link>
+            {/* 3. 사고 접수 담당자(accident_manager) 또는 관리자(admin)만 보임 */}
+            {(role === 'admin' || role === 'accident_manager') && (
+              <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
+                <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
+              </Link>
+            )}
 
-  {/* layout.tsx의 메뉴 리스트 부분에 추가 */}
-<Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
-  <span className="text-xl">📌</span> <span>즐겨찾기</span>
-</Link>
-)}
+            {/* 4. 관리자 전용 메뉴 (착불 관리) */}
+            {role === 'admin' && (
+              <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+                <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
+              </Link>
+            )}
+
+            {/* 5. 즐겨찾기 (모든 로그인 유저가 볼 수 있게 배치) */}
+            <Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+              <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
+            </Link>
             
           </div>
 
