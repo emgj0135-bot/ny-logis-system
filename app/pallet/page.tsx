@@ -7,8 +7,8 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 export default function PalletsPage() {
   const [list, setList] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [isEdit, setIsEdit] = useState(false); // 수정 모드인지 확인
-  const [targetId, setTargetId] = useState<number | null>(null); // 수정할 항목 ID
+  const [isEdit, setIsEdit] = useState(false); 
+  const [targetId, setTargetId] = useState<number | null>(null); 
   
   const [formData, setFormData] = useState({
     type: "출고", company_name: "", kpp_count: "", kpp_number: "", aj_count: "", aj_name: ""
@@ -21,12 +21,10 @@ export default function PalletsPage() {
     if (!error) setList(data || []);
   };
 
-  // 등록 및 수정 통합 핸들러
   const handleSubmit = async () => {
     if (!formData.company_name) return alert("업체명을 입력해줘 갱미야!");
     
     if (isEdit && targetId) {
-      // 수정하기
       const { error } = await supabase.from('pallets').update({ ...formData }).eq('id', targetId);
       if (!error) {
         alert("수정 완료! ✨");
@@ -34,7 +32,6 @@ export default function PalletsPage() {
         fetchData();
       }
     } else {
-      // 신규 등록
       const { error } = await supabase.from('pallets').insert([{ ...formData, status: '미확인' }]);
       if (!error) {
         alert("전표 등록 성공! 🚀");
@@ -44,21 +41,22 @@ export default function PalletsPage() {
     }
   };
 
-  // 미확인 -> 확인완료 처리 함수 (이게 갱미가 말한 거!)
-  const handleStatusUpdate = async (id: number) => {
+  // 🛠️ 갱미야! 상태를 왔다갔다 토글하는 함수로 업그레이드했어!
+  const handleStatusUpdate = async (id: number, currentStatus: string) => {
+    const newStatus = currentStatus === '확인완료' ? '미확인' : '확인완료';
+    
     const { error } = await supabase
       .from('pallets')
-      .update({ status: '확인완료' })
+      .update({ status: newStatus })
       .eq('id', id);
     
     if (!error) {
-      fetchData(); // 데이터 새로고침
+      fetchData(); 
     } else {
       alert("상태 변경 에러: " + error.message);
     }
   };
 
-  // 수정 버튼 눌렀을 때 모달 띄우기
   const openEditModal = (item: any) => {
     setIsEdit(true);
     setTargetId(item.id);
@@ -101,7 +99,7 @@ export default function PalletsPage() {
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
             <tr>
-              <th className="p-6 text-left">상태</th>
+              <th className="p-6 text-left">상태 (클릭시 전환)</th>
               <th className="p-6 text-left">날짜 / 구분</th>
               <th className="p-6 text-left">KPP 정보</th>
               <th className="p-6 text-left">AJ 정보</th>
@@ -112,16 +110,16 @@ export default function PalletsPage() {
             {list.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 transition-all">
                 <td className="p-6">
-                  {/* 미확인 버튼을 누르면 확인완료로 변하게 설정! */}
+                  {/* 🛠️ 이제 누를 때마다 미확인 <-> 확인완료가 바뀌어! */}
                   <button 
-                    onClick={() => item.status === '미확인' && handleStatusUpdate(item.id)}
-                    className={`px-4 py-1.5 rounded-full text-[10px] transition-all ${
+                    onClick={() => handleStatusUpdate(item.id, item.status)}
+                    className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black shadow-sm ${
                       item.status === '미확인' 
-                      ? 'bg-orange-50 text-orange-500 border border-orange-100 cursor-pointer hover:bg-orange-500 hover:text-white' 
-                      : 'bg-green-50 text-green-500 border border-green-100 cursor-default'
+                      ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' 
+                      : 'bg-green-50 text-green-500 border border-green-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'
                     }`}
                   >
-                    {item.status}
+                    {item.status === '확인완료' ? '✓ 확인완료' : '? 미확인'}
                   </button>
                 </td>
                 <td className="p-6">
@@ -129,11 +127,11 @@ export default function PalletsPage() {
                   <p className={`text-[11px] mt-0.5 ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p>
                 </td>
                 <td className="p-6">
-                  <p className="text-blue-600 text-sm">{item.kpp_count || "0매"}</p>
+                  <p className="text-blue-600 text-sm">{item.kpp_count || "0"}매</p>
                   <p className="text-slate-400 text-[10px]">{item.kpp_number || "-"}</p>
                 </td>
                 <td className="p-6">
-                  <p className="text-green-500 text-sm">{item.aj_count || "0매"}</p>
+                  <p className="text-green-500 text-sm">{item.aj_count || "0"}매</p>
                   <p className="text-slate-400 text-[10px]">{item.aj_name || "-"}</p>
                 </td>
                 <td className="p-6 text-center">
@@ -148,31 +146,26 @@ export default function PalletsPage() {
         </table>
       </div>
 
-      {/* 신규 등록/수정 모달 */}
+      {/* 모달 생략 (동일) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-[3.5rem] shadow-2xl p-12 animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-black mb-8 italic text-slate-800">{isEdit ? 'EDIT SLIP' : 'NEW SLIP'}</h2>
-            
             <div className="space-y-5">
               <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
                 {['출고', '입고'].map(t => (
                   <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
                 ))}
               </div>
-
               <input placeholder="업체명" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
-
               <div className="grid grid-cols-2 gap-3">
                 <input placeholder="KPP 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm" value={formData.kpp_count} onChange={e => setFormData({...formData, kpp_count: e.target.value})} />
                 <input placeholder="KPP 번호" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px]" value={formData.kpp_number} onChange={e => setFormData({...formData, kpp_number: e.target.value})} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <input placeholder="AJ 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm" value={formData.aj_count} onChange={e => setFormData({...formData, aj_count: e.target.value})} />
                 <input placeholder="AJ 업체/번호" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px]" value={formData.aj_name} onChange={e => setFormData({...formData, aj_name: e.target.value})} />
               </div>
-
               <div className="flex gap-3 mt-6">
                 <button onClick={handleSubmit} className="flex-1 bg-[#1a1c2e] text-white p-5 rounded-[1.5rem] font-black shadow-xl hover:bg-black transition-all">
                   {isEdit ? '수정하기' : '등록하기'}
