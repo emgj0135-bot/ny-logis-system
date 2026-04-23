@@ -10,9 +10,8 @@ export default function PalletsPage() {
   const [isEdit, setIsEdit] = useState(false); 
   const [targetId, setTargetId] = useState<number | null>(null); 
   
-  // 📄 페이지네이션 상태 추가
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // 한 페이지에 보여줄 개수
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     type: "출고", company_name: "", kpp_count: "", kpp_number: "", aj_count: "", aj_name: ""
@@ -25,7 +24,6 @@ export default function PalletsPage() {
     if (!error) setList(data || []);
   };
 
-  // 📄 현재 페이지에 해당하는 데이터만 계산
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = list.slice(indexOfFirstItem, indexOfLastItem);
@@ -47,7 +45,7 @@ export default function PalletsPage() {
         alert("전표 등록 성공! 🚀");
         closeModal();
         fetchData();
-        setCurrentPage(1); // 신규 등록 시 첫 페이지로 이동
+        setCurrentPage(1);
       }
     }
   };
@@ -82,6 +80,17 @@ export default function PalletsPage() {
     if (!error) fetchData();
   };
 
+  // 🕒 날짜 포맷팅 함수 (YYYY-MM-DD HH:mm)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d} ${hh}:${mm}`;
+  };
+
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
@@ -112,6 +121,7 @@ export default function PalletsPage() {
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
             <tr>
               <th className="p-6 text-left">상태</th>
+              <th className="p-6 text-left">작성일자</th>
               <th className="p-6 text-left">날짜 / 구분</th>
               <th className="p-6 text-left">KPP 정보</th>
               <th className="p-6 text-left">AJ 정보</th>
@@ -132,6 +142,10 @@ export default function PalletsPage() {
                   >
                     {item.status}
                   </button>
+                </td>
+                {/* ✨ 추가된 작성일자 컬럼 */}
+                <td className="p-6">
+                  <p className="text-slate-500 text-[11px]">{formatDate(item.created_at)}</p>
                 </td>
                 <td className="p-6">
                   <p className="text-slate-800 text-sm">{new Date(item.created_at).toISOString().split('T')[0]}</p>
@@ -192,7 +206,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 모달 섹션 (기존과 동일) */}
+      {/* 모달 섹션 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
