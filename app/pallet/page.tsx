@@ -61,7 +61,7 @@ export default function PalletsPage() {
     try {
       // @ts-ignore
       const XLSX = window.XLSX;
-      if (!XLSX) return alert("라이브러리 로딩 중이야. 1초만 기다려줘 갱미야!");
+      if (!XLSX) return alert("라이브러리 로딩중 입니다.");
 
       const { data, error } = await supabase
         .from('pallets')
@@ -71,7 +71,7 @@ export default function PalletsPage() {
         .order('issue_date', { ascending: true });
 
       if (error || !data || data.length === 0) {
-        return alert("해당 기간에 데이터가 없어, 갱미야!");
+        return alert("해당 기간에 데이터가 없습니다.");
       }
 
       const excelData = data.map(item => ({
@@ -94,7 +94,7 @@ export default function PalletsPage() {
       XLSX.writeFile(workbook, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
       setShowExcelModal(false);
     } catch (err) {
-      alert("엑셀 생성 중 오류가 났어. 새로고침 후 다시 해봐!");
+      alert("엑셀 생성 중 오류가 났습니다. 새로고침 후 다시 시도하세요.");
     }
   };
 
@@ -110,8 +110,8 @@ export default function PalletsPage() {
   };
 
   const handleBulkStatusUpdate = async (newStatus: '확인완료' | '미확인') => {
-    if (selectedIds.length === 0) return alert("선택된 항목이 없어, 갱미야!");
-    if (!confirm(`${selectedIds.length}개의 항목을 [${newStatus}] 상태로 변경할까?`)) return;
+    if (selectedIds.length === 0) return alert("선택된 항목이 없습니다.");
+    if (!confirm(`${selectedIds.length}개의 항목을 [${newStatus}] 상태로 변경할까요?`)) return;
     const { error } = await supabase.from('pallets').update({ status: newStatus }).in('id', selectedIds);
     if (!error) { alert("일괄 변경 성공! ✨"); setSelectedIds([]); fetchData(); }
   };
@@ -138,7 +138,7 @@ export default function PalletsPage() {
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   const handleSubmit = async () => {
-    if (!formData.company_name) return alert("업체명을 입력해줘 갱미야!");
+    if (!formData.company_name) return alert("업체명을 입력해주세요.");
     
     // 숫자로 변환 필요한 필드 처리
     const payload = {
@@ -180,7 +180,7 @@ export default function PalletsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if(!confirm("진짜 삭제할 거야?")) return;
+    if(!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from('pallets').delete().eq('id', id);
     if (!error) fetchData();
   };
@@ -314,7 +314,7 @@ export default function PalletsPage() {
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
           <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
             <h2 className="text-lg font-black mb-2 text-slate-800">Excel Download</h2>
-            <p className="text-slate-400 text-xs font-bold mb-6">다운로드할 발행일자 기간을 선택해줘.</p>
+            <p className="text-slate-400 text-xs font-bold mb-6">다운로드할 발행일자 기간을 선택하세요.</p>
             <div className="space-y-4">
               <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none text-green-600" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
               <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none text-green-600" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
