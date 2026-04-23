@@ -17,7 +17,9 @@ export default function PalletsPage() {
   const today = new Date().toISOString().split('T')[0];
 
   const [filters, setFilters] = useState({
-    created_start: "", created_end: "", issue_start: "", issue_end: "", status: ""
+    created_start: "", created_end: "", issue_start: "", issue_end: "", 
+    status: "",
+    type: "" // ✨ 입출고 타입 필터 추가
   });
 
   const [formData, setFormData] = useState({
@@ -67,12 +69,15 @@ export default function PalletsPage() {
     if (filters.issue_start) result = result.filter(item => item.issue_date && item.issue_date >= filters.issue_start);
     if (filters.issue_end) result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
     if (filters.status) result = result.filter(item => item.status === filters.status);
+    // ✨ 입출고 타입 필터 로직
+    if (filters.type) result = result.filter(item => item.type === filters.type);
+
     setFilteredList(result);
     setCurrentPage(1);
     setSelectedIds([]); 
   };
 
-  const resetFilters = () => setFilters({ created_start: "", created_end: "", issue_start: "", issue_end: "", status: "" });
+  const resetFilters = () => setFilters({ created_start: "", created_end: "", issue_start: "", issue_end: "", status: "", type: "" });
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -163,8 +168,13 @@ export default function PalletsPage() {
           </div>
         </div>
         <div className="flex gap-3 pt-4 border-t border-slate-50">
+          {/* ✨ 상태 필터 */}
           <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
             <option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인완료">확인완료</option>
+          </select>
+          {/* ✨ 입출고 필터 추가 */}
+          <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
+            <option value="">구분 전체</option><option value="출고">출고만 보기</option><option value="입고">입고만 보기</option>
           </select>
           <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
           <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all border border-slate-100">RESET</button>
@@ -188,7 +198,8 @@ export default function PalletsPage() {
               <th className="p-6 text-center w-12"><input type="checkbox" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
               <th className="p-6 text-left">상태</th>
               <th className="p-6 text-left">작성일자</th>
-              <th className="p-6 text-left">발행일 / 구분</th>
+              <th className="p-6 text-left w-20">구분</th> {/* ✨ 구분 컬럼 추가 */}
+              <th className="p-6 text-left">발행일 / 업체명</th>
               <th className="p-6 text-left">KPP (N11 / N12)</th>
               <th className="p-6 text-left">AJ (11A / 12A)</th>
               <th className="p-6 text-center">관리</th>
@@ -200,13 +211,18 @@ export default function PalletsPage() {
                 <td className="p-6 text-center"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
                 <td className="p-6"><button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] ${item.status === '미확인' ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-500'}`}>{item.status}</button></td>
                 <td className="p-6 text-slate-400 text-[10px]">{formatDate(item.created_at)}</td>
-                <td className="p-6"><p>{item.issue_date}</p><p className={`text-[11px] ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p></td>
+                {/* ✨ 출고/입고 배지 표시 */}
+                <td className="p-6">
+                  <span className={`px-3 py-1 rounded-lg text-[10px] ${item.type === '출고' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-blue-50 text-blue-500 border border-blue-100'}`}>
+                    {item.type}
+                  </span>
+                </td>
+                <td className="p-6"><p>{item.issue_date}</p><p className="text-slate-500 text-[11px]">{item.company_name}</p></td>
                 <td className="p-6 text-blue-600 font-bold">{item.kpp_n11_count || 0} / {item.kpp_n12_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
                 <td className="p-6 text-green-500 font-bold">{item.aj_11a_count || 0} / {item.aj_12a_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
                 <td className="p-6 text-center">
                    <div className="flex gap-4 justify-center text-slate-300">
                       <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
-                      {/* ❌ 삭제 버튼 복구 완료! */}
                       <button onClick={() => handleDelete(item.id)} className="hover:text-red-400">삭제</button>
                    </div>
                 </td>
@@ -215,7 +231,6 @@ export default function PalletsPage() {
           </tbody>
         </table>
 
-        {/* 📄 페이지네이션 복구 완료! */}
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
           <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
           <div className="flex gap-1">
@@ -227,7 +242,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 🟢 모달 (기존 디자인 유지) */}
+      {/* 모달 (기존 디자인 유지) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
