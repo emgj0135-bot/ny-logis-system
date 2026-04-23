@@ -11,14 +11,15 @@ export default function PalletsPage() {
   const [isEdit, setIsEdit] = useState(false); 
   const [targetId, setTargetId] = useState<number | null>(null); 
   
+  // ✅ 체크박스 선택 관리를 위한 상태 추가
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
   const today = new Date().toISOString().split('T')[0];
 
   const [filters, setFilters] = useState({
-    created_start: "", created_end: "",
-    issue_start: "", issue_end: ""
+    created_start: "", created_end: "", issue_start: "", issue_end: ""
   });
 
   const [formData, setFormData] = useState({
@@ -35,37 +36,62 @@ export default function PalletsPage() {
     }
   };
 
-  // 🔍 날짜 자동 계산 함수
+  // ✅ 체크박스 개별 선택 함수
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // ✅ 전체 선택/해제 함수 (현재 페이지 기준)
+  const toggleSelectAll = () => {
+    const currentPageIds = currentItems.map(item => item.id);
+    const isAllSelected = currentPageIds.every(id => selectedIds.includes(id));
+    
+    if (isAllSelected) {
+      setSelectedIds(prev => prev.filter(id => !currentPageIds.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...currentPageIds])));
+    }
+  };
+
+  // ✅ 일괄 상태 변경 함수
+  const handleBulkStatusUpdate = async (newStatus: '확인완료' | '미확인') => {
+    if (selectedIds.length === 0) return alert("선택된 항목이 없어, 갱미야!");
+    if (!confirm(`${selectedIds.length}개의 항목을 [${newStatus}] 상태로 변경할까?`)) return;
+
+    const { error } = await supabase
+      .from('pallets')
+      .update({ status: newStatus })
+      .in('id', selectedIds);
+
+    if (!error) {
+      alert("일괄 변경 성공! ✨");
+      setSelectedIds([]); // 선택 초기화
+      fetchData();
+    } else {
+      alert("변경 중 에러 발생: " + error.message);
+    }
+  };
+
   const setQuickDate = (type: string, filterType: 'created' | 'issue') => {
     const now = new Date();
     let start = new Date();
     let end = new Date();
-
     switch (type) {
       case "today": break;
-      case "yesterday": 
-        start.setDate(now.getDate() - 1); 
-        end.setDate(now.getDate() - 1); 
-        break;
-      case "tomorrow":
-        start.setDate(now.getDate() + 1);
-        end.setDate(now.getDate() + 1);
-        break;
+      case "yesterday": start.setDate(now.getDate() - 1); end.setDate(now.getDate() - 1); break;
+      case "tomorrow": start.setDate(now.getDate() + 1); end.setDate(now.getDate() + 1); break;
       case "week": start.setDate(now.getDate() - 7); break;
       case "1month": start.setMonth(now.getMonth() - 1); break;
       case "2month": start.setMonth(now.getMonth() - 2); break;
       case "3month": start.setMonth(now.getMonth() - 3); break;
       default: return;
     }
-
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
-
-    if (filterType === 'created') {
-      setFilters(prev => ({ ...prev, created_start: startStr, created_end: endStr }));
-    } else {
-      setFilters(prev => ({ ...prev, issue_start: startStr, issue_end: endStr }));
-    }
+    if (filterType === 'created') setFilters(prev => ({ ...prev, created_start: startStr, created_end: endStr }));
+    else setFilters(prev => ({ ...prev, issue_start: startStr, issue_end: endStr }));
   };
 
   const handleSearch = () => {
@@ -76,12 +102,10 @@ export default function PalletsPage() {
     if (filters.issue_end) result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
     setFilteredList(result);
     setCurrentPage(1);
+    setSelectedIds([]); // 검색 시 선택 초기화
   };
 
-  // 🔄 리셋 버튼: 날짜 값만 비움 (검색은 유지됨)
-  const resetFilters = () => {
-    setFilters({ created_start: "", created_end: "", issue_start: "", issue_end: "" });
-  };
+  const resetFilters = () => setFilters({ created_start: "", created_end: "", issue_start: "", issue_end: "" });
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -105,15 +129,15 @@ export default function PalletsPage() {
     fetchData();
   };
 
+  const closeModal = () => {
+    setShowModal(false); setIsEdit(false); setTargetId(null);
+    setFormData({ type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: "" });
+  };
+
   const openEditModal = (item: any) => {
     setIsEdit(true); setTargetId(item.id);
     setFormData({ type: item.type, company_name: item.company_name, issue_date: item.issue_date || today, kpp_count: item.kpp_count, kpp_number: item.kpp_number, aj_count: item.aj_count, aj_name: item.aj_name });
     setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false); setIsEdit(false); setTargetId(null);
-    setFormData({ type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: "" });
   };
 
   const handleDelete = async (id: number) => {
@@ -150,7 +174,6 @@ export default function PalletsPage() {
       {/* 🔍 검색 필터 영역 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
-          {/* 작성일자 필터 */}
           <div className="space-y-3">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date (작성일)</p>
             <div className="flex items-center gap-3">
@@ -159,18 +182,10 @@ export default function PalletsPage() {
               <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
               <select onChange={(e) => setQuickDate(e.target.value, 'created')} className="p-3 bg-slate-50 rounded-xl border-none text-[10px] font-black outline-none text-blue-600">
                 <option value="">간편 선택</option>
-                <option value="today">오늘</option>
-                <option value="yesterday">어제</option>
-                <option value="tomorrow">내일</option>
-                <option value="week">최근 한주</option>
-                <option value="1month">최근 한달</option>
-                <option value="2month">최근 두달</option>
-                <option value="3month">최근 세달</option>
+                <option value="today">오늘</option><option value="yesterday">어제</option><option value="tomorrow">내일</option><option value="week">최근 한주</option><option value="1month">최근 한달</option><option value="2month">최근 두달</option><option value="3month">최근 세달</option>
               </select>
             </div>
           </div>
-
-          {/* 발행일자 필터 */}
           <div className="space-y-3">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Issue Date (발행일)</p>
             <div className="flex items-center gap-3">
@@ -179,18 +194,11 @@ export default function PalletsPage() {
               <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
               <select onChange={(e) => setQuickDate(e.target.value, 'issue')} className="p-3 bg-slate-50 rounded-xl border-none text-[10px] font-black outline-none text-green-600">
                 <option value="">간편 선택</option>
-                <option value="today">오늘</option>
-                <option value="yesterday">어제</option>
-                <option value="tomorrow">내일</option>
-                <option value="week">최근 한주</option>
-                <option value="1month">최근 한달</option>
-                <option value="2month">최근 두달</option>
-                <option value="3month">최근 세달</option>
+                <option value="today">오늘</option><option value="yesterday">어제</option><option value="tomorrow">내일</option><option value="week">최근 한주</option><option value="1month">최근 한달</option><option value="2month">최근 두달</option><option value="3month">최근 세달</option>
               </select>
             </div>
           </div>
         </div>
-
         <div className="flex gap-3 pt-2 border-t border-slate-50">
           <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">SEARCH FILTER 🔍</button>
           <button onClick={resetFilters} className="bg-slate-100 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all">RESET DATES</button>
@@ -199,9 +207,30 @@ export default function PalletsPage() {
 
       {/* 테이블 섹션 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        {/* ✅ 일괄 변경 툴바 추가 */}
+        {selectedIds.length > 0 && (
+          <div className="bg-blue-600 px-8 py-4 flex justify-between items-center animate-in slide-in-from-top duration-300">
+            <p className="text-white font-black text-sm">{selectedIds.length}개 항목 선택됨</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleBulkStatusUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] hover:bg-blue-50">선택 확인완료 처리</button>
+              <button onClick={() => handleBulkStatusUpdate('미확인')} className="bg-blue-400 text-white px-4 py-2 rounded-xl font-black text-[10px] hover:bg-blue-500">선택 미확인 처리</button>
+              <button onClick={() => setSelectedIds([])} className="text-blue-100 px-2 py-2 font-bold text-[10px] hover:text-white">취소</button>
+            </div>
+          </div>
+        )}
+
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
             <tr>
+              <th className="p-6 text-center w-12">
+                {/* ✅ 전체 선택 체크박스 */}
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                  checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))}
+                  onChange={toggleSelectAll}
+                />
+              </th>
               <th className="p-6 text-left">상태</th>
               <th className="p-6 text-left">작성일자</th>
               <th className="p-6 text-left">발행일 / 구분</th>
@@ -212,7 +241,16 @@ export default function PalletsPage() {
           </thead>
           <tbody className="divide-y divide-slate-50 font-black">
             {currentItems.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50 transition-all">
+              <tr key={item.id} className={`hover:bg-slate-50 transition-all ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`}>
+                <td className="p-6 text-center">
+                  {/* ✅ 개별 선택 체크박스 */}
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                  />
+                </td>
                 <td className="p-6">
                   <button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' : 'bg-green-50 text-green-500 border border-green-100'}`}>{item.status}</button>
                 </td>
@@ -221,14 +259,8 @@ export default function PalletsPage() {
                   <p className="text-slate-800 text-sm">{item.issue_date || "날짜미지정"}</p>
                   <p className={`text-[11px] mt-0.5 ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p>
                 </td>
-                <td className="p-6">
-                  <p className="text-blue-600 text-sm">{item.kpp_count || "0매"}</p>
-                  <p className="text-slate-400 text-[10px]">{item.kpp_number || "-"}</p>
-                </td>
-                <td className="p-6">
-                  <p className="text-green-500 text-sm">{item.aj_count || "0매"}</p>
-                  <p className="text-slate-400 text-[10px]">{item.aj_name || "-"}</p>
-                </td>
+                <td className="p-6 text-blue-600 text-sm">{item.kpp_count || "0매"}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
+                <td className="p-6 text-green-500 text-sm">{item.aj_count || "0매"}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
                 <td className="p-6 text-center">
                    <div className="flex gap-4 justify-center text-slate-300 font-black">
                       <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
@@ -239,19 +271,19 @@ export default function PalletsPage() {
             ))}
           </tbody>
         </table>
-        {/* 페이지네이션 (생략 - 위와 동일) */}
+        {/* 페이지네이션 */}
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">PREV</button>
           <div className="flex gap-1">
             {[...Array(totalPages)].map((_, i) => (
-              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-100' : 'bg-white text-slate-400 hover:bg-slate-100'}`}>{i + 1}</button>
+              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-slate-400'}`}>{i + 1}</button>
             ))}
           </div>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">NEXT</button>
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">NEXT</button>
         </div>
       </div>
 
-      {/* 모달 섹션 (기존 코드 유지) */}
+      {/* 모달 (기존 유지) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
