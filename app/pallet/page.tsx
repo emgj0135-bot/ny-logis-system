@@ -13,8 +13,17 @@ export default function PalletsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // 🗓️ 오늘 날짜를 기본값으로 설정 (YYYY-MM-DD)
+  const today = new Date().toISOString().split('T')[0];
+
   const [formData, setFormData] = useState({
-    type: "출고", company_name: "", kpp_count: "", kpp_number: "", aj_count: "", aj_name: ""
+    type: "출고", 
+    company_name: "", 
+    issue_date: today, // ✨ 발행일자 필드 추가
+    kpp_count: "", 
+    kpp_number: "", 
+    aj_count: "", 
+    aj_name: ""
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -61,8 +70,13 @@ export default function PalletsPage() {
     setIsEdit(true);
     setTargetId(item.id);
     setFormData({
-      type: item.type, company_name: item.company_name, kpp_count: item.kpp_count,
-      kpp_number: item.kpp_number, aj_count: item.aj_count, aj_name: item.aj_name
+      type: item.type, 
+      company_name: item.company_name, 
+      issue_date: item.issue_date || today, // 데이터가 없으면 오늘 날짜
+      kpp_count: item.kpp_count,
+      kpp_number: item.kpp_number, 
+      aj_count: item.aj_count, 
+      aj_name: item.aj_name
     });
     setShowModal(true);
   };
@@ -71,7 +85,7 @@ export default function PalletsPage() {
     setShowModal(false);
     setIsEdit(false);
     setTargetId(null);
-    setFormData({ type: "출고", company_name: "", kpp_count: "", kpp_number: "", aj_count: "", aj_name: "" });
+    setFormData({ type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: "" });
   };
 
   const handleDelete = async (id: number) => {
@@ -80,7 +94,6 @@ export default function PalletsPage() {
     if (!error) fetchData();
   };
 
-  // 🕒 날짜 포맷팅 함수 (YYYY-MM-DD HH:mm)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const y = date.getFullYear();
@@ -94,7 +107,7 @@ export default function PalletsPage() {
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
-      {/* 🔵 헤더 섹션 */}
+      {/* 🔵 헤더 */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
@@ -115,14 +128,14 @@ export default function PalletsPage() {
         </button>
       </div>
 
-      {/* 리스트 테이블 섹션 */}
+      {/* 테이블 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
             <tr>
               <th className="p-6 text-left">상태</th>
               <th className="p-6 text-left">작성일자</th>
-              <th className="p-6 text-left">날짜 / 구분</th>
+              <th className="p-6 text-left">발행일 / 구분</th>
               <th className="p-6 text-left">KPP 정보</th>
               <th className="p-6 text-left">AJ 정보</th>
               <th className="p-6 text-center">관리</th>
@@ -132,23 +145,16 @@ export default function PalletsPage() {
             {currentItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 transition-all">
                 <td className="p-6">
-                  <button 
-                    onClick={() => handleStatusUpdate(item.id, item.status)}
-                    className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black ${
-                      item.status === '미확인' 
-                      ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' 
-                      : 'bg-green-50 text-green-500 border border-green-100'
-                    }`}
-                  >
+                  <button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' : 'bg-green-50 text-green-500 border border-green-100'}`}>
                     {item.status}
                   </button>
                 </td>
-                {/* ✨ 추가된 작성일자 컬럼 */}
                 <td className="p-6">
-                  <p className="text-slate-500 text-[11px]">{formatDate(item.created_at)}</p>
+                  <p className="text-slate-400 text-[10px]">{formatDate(item.created_at)}</p>
                 </td>
                 <td className="p-6">
-                  <p className="text-slate-800 text-sm">{new Date(item.created_at).toISOString().split('T')[0]}</p>
+                  {/* ✨ issue_date(발행일자) 표시 */}
+                  <p className="text-slate-800 text-sm">{item.issue_date || "날짜미지정"}</p>
                   <p className={`text-[11px] mt-0.5 ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p>
                 </td>
                 <td className="p-6">
@@ -170,43 +176,19 @@ export default function PalletsPage() {
           </tbody>
         </table>
 
-        {/* 📄 페이지네이션 컨트롤 바 */}
+        {/* 페이지네이션 */}
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
-          <button 
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
-            className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all"
-          >
-            PREV
-          </button>
-          
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
           <div className="flex gap-1">
             {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${
-                  currentPage === i + 1 
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-100' 
-                  : 'bg-white text-slate-400 hover:bg-slate-100'
-                }`}
-              >
-                {i + 1}
-              </button>
+              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-100' : 'bg-white text-slate-400 hover:bg-slate-100'}`}>{i + 1}</button>
             ))}
           </div>
-
-          <button 
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(p => p + 1)}
-            className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all"
-          >
-            NEXT
-          </button>
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">NEXT</button>
         </div>
       </div>
 
-      {/* 모달 섹션 */}
+      {/* 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
@@ -217,6 +199,13 @@ export default function PalletsPage() {
                   <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
                 ))}
               </div>
+              
+              {/* ✨ 발행일자 선택 필드 추가 */}
+              <div className="space-y-1">
+                <p className="text-[10px] text-slate-400 ml-2 uppercase font-black tracking-widest">Issue Date</p>
+                <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none text-blue-600" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
+              </div>
+
               <input placeholder="업체명" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
               <div className="grid grid-cols-2 gap-3">
                 <input placeholder="KPP 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none" value={formData.kpp_count} onChange={e => setFormData({...formData, kpp_count: e.target.value})} />
