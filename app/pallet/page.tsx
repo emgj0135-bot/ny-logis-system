@@ -6,6 +6,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 
 export default function PalletsPage() {
   const [list, setList] = useState<any[]>([]);
+  const [filteredList, setFilteredList] = useState<any[]>([]); // ✨ 필터링된 결과를 담을 상태
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false); 
   const [targetId, setTargetId] = useState<number | null>(null); 
@@ -13,49 +14,74 @@ export default function PalletsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // 🗓️ 오늘 날짜를 기본값으로 설정 (YYYY-MM-DD)
   const today = new Date().toISOString().split('T')[0];
 
+  // 🔍 검색 필터 상태 (작성일자 시작/종료, 발행일자 시작/종료)
+  const [filters, setFilters] = useState({
+    created_start: "",
+    created_end: "",
+    issue_start: "",
+    issue_end: ""
+  });
+
   const [formData, setFormData] = useState({
-    type: "출고", 
-    company_name: "", 
-    issue_date: today, // ✨ 발행일자 필드 추가
-    kpp_count: "", 
-    kpp_number: "", 
-    aj_count: "", 
-    aj_name: ""
+    type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: ""
   });
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     const { data, error } = await supabase.from('pallets').select('*').order('created_at', { ascending: false });
-    if (!error) setList(data || []);
+    if (!error) {
+      setList(data || []);
+      setFilteredList(data || []); // 초기에는 전체 리스트 보여줌
+    }
+  };
+
+  // 🔍 검색 버튼 클릭 시 실행되는 필터 로직
+  const handleSearch = () => {
+    let result = [...list];
+
+    // 1. 작성일자(created_at) 필터
+    if (filters.created_start) {
+      result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
+    }
+    if (filters.created_end) {
+      result = result.filter(item => item.created_at.split('T')[0] <= filters.created_end);
+    }
+
+    // 2. 발행일자(issue_date) 필터
+    if (filters.issue_start) {
+      result = result.filter(item => item.issue_date && item.issue_date >= filters.issue_start);
+    }
+    if (filters.issue_end) {
+      result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
+    }
+
+    setFilteredList(result);
+    setCurrentPage(1); // 검색 시 첫 페이지로 이동
+  };
+
+  // 🔄 필터 초기화
+  const resetFilters = () => {
+    setFilters({ created_start: "", created_end: "", issue_start: "", issue_end: "" });
+    setFilteredList(list);
+    setCurrentPage(1);
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = list.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(list.length / itemsPerPage);
+  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   const handleSubmit = async () => {
     if (!formData.company_name) return alert("업체명을 입력해줘 갱미야!");
-    
     if (isEdit && targetId) {
       const { error } = await supabase.from('pallets').update({ ...formData }).eq('id', targetId);
-      if (!error) {
-        alert("수정 완료! ✨");
-        closeModal();
-        fetchData();
-      }
+      if (!error) { alert("수정 완료! ✨"); closeModal(); fetchData(); }
     } else {
       const { error } = await supabase.from('pallets').insert([{ ...formData, status: '미확인' }]);
-      if (!error) {
-        alert("전표 등록 성공! 🚀");
-        closeModal();
-        fetchData();
-        setCurrentPage(1);
-      }
+      if (!error) { alert("전표 등록 성공! 🚀"); closeModal(); fetchData(); setCurrentPage(1); }
     }
   };
 
@@ -63,20 +89,14 @@ export default function PalletsPage() {
     const newStatus = currentStatus === '확인완료' ? '미확인' : '확인완료';
     const { error } = await supabase.from('pallets').update({ status: newStatus }).eq('id', id);
     if (!error) fetchData();
-    else alert("상태 변경 에러: " + error.message);
   };
 
   const openEditModal = (item: any) => {
     setIsEdit(true);
     setTargetId(item.id);
     setFormData({
-      type: item.type, 
-      company_name: item.company_name, 
-      issue_date: item.issue_date || today, // 데이터가 없으면 오늘 날짜
-      kpp_count: item.kpp_count,
-      kpp_number: item.kpp_number, 
-      aj_count: item.aj_count, 
-      aj_name: item.aj_name
+      type: item.type, company_name: item.company_name, issue_date: item.issue_date || today,
+      kpp_count: item.kpp_count, kpp_number: item.kpp_number, aj_count: item.aj_count, aj_name: item.aj_name
     });
     setShowModal(true);
   };
@@ -108,7 +128,7 @@ export default function PalletsPage() {
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
       {/* 🔵 헤더 */}
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
           <div>
@@ -120,12 +140,33 @@ export default function PalletsPage() {
             </p>
           </div>
         </div>
-        <button 
-          onClick={() => setShowModal(true)} 
-          className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all text-sm"
-        >
-          + 신규 전표 등록
-        </button>
+        <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm">+ 신규 전표 등록</button>
+      </div>
+
+      {/* 🔍 검색 필터 영역 */}
+      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-8 flex flex-wrap items-end gap-6">
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date (작성일)</p>
+          <div className="flex items-center gap-2">
+            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
+            <span className="text-slate-300">~</span>
+            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Issue Date (발행일)</p>
+          <div className="flex items-center gap-2">
+            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_start} onChange={e => setFilters({...filters, issue_start: e.target.value})} />
+            <span className="text-slate-300">~</span>
+            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-black transition-all">SEARCH</button>
+          <button onClick={resetFilters} className="bg-slate-100 text-slate-400 px-6 py-3 rounded-xl font-black text-xs hover:bg-slate-200 transition-all">RESET</button>
+        </div>
       </div>
 
       {/* 테이블 */}
@@ -149,11 +190,8 @@ export default function PalletsPage() {
                     {item.status}
                   </button>
                 </td>
+                <td className="p-6"><p className="text-slate-400 text-[10px]">{formatDate(item.created_at)}</p></td>
                 <td className="p-6">
-                  <p className="text-slate-400 text-[10px]">{formatDate(item.created_at)}</p>
-                </td>
-                <td className="p-6">
-                  {/* ✨ issue_date(발행일자) 표시 */}
                   <p className="text-slate-800 text-sm">{item.issue_date || "날짜미지정"}</p>
                   <p className={`text-[11px] mt-0.5 ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p>
                 </td>
@@ -188,7 +226,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 모달 */}
+      {/* 모달 (생략 - 기존 코드 유지) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
@@ -199,13 +237,10 @@ export default function PalletsPage() {
                   <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
                 ))}
               </div>
-              
-              {/* ✨ 발행일자 선택 필드 추가 */}
               <div className="space-y-1">
                 <p className="text-[10px] text-slate-400 ml-2 uppercase font-black tracking-widest">Issue Date</p>
                 <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none text-blue-600" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
               </div>
-
               <input placeholder="업체명" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
               <div className="grid grid-cols-2 gap-3">
                 <input placeholder="KPP 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none" value={formData.kpp_count} onChange={e => setFormData({...formData, kpp_count: e.target.value})} />
