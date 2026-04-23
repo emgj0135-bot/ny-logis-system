@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// ✅ 오류를 일으키는 상단 임포트를 제거했어! 갱미야.
+// ✅ 1. 라이브러리 변수를 미리 준비해둬 (전역 선언)
+let XLSX_LIB: any = null;
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -31,7 +32,21 @@ export default function PalletsPage() {
     aj_11a_count: "", aj_12a_count: "", aj_name: "" 
   });
 
-  useEffect(() => { fetchData(); }, []);
+  // ✅ 2. 페이지 시작 시 데이터와 라이브러리를 동시에 준비해
+  useEffect(() => { 
+    fetchData(); 
+    loadExcelLibrary();
+  }, []);
+
+  const loadExcelLibrary = async () => {
+    try {
+      if (!XLSX_LIB) {
+        XLSX_LIB = await import("xlsx");
+      }
+    } catch (err) {
+      console.error("라이브러리 로딩 실패:", err);
+    }
+  };
 
   const fetchData = async () => {
     const { data, error } = await supabase.from('pallets').select('*').order('created_at', { ascending: false });
@@ -41,13 +56,14 @@ export default function PalletsPage() {
     }
   };
 
-  // 📥 엑셀 다운로드 실행 함수 (수정된 버전)
+  // 📥 3. 엑셀 다운로드 실행 함수 (안전한 버전)
   const downloadExcel = async () => {
     try {
-      // ✨ 빌드 에러 방지를 위해 버튼 클릭 시점에 라이브러리 로드
-      const XLSX = await import("xlsx");
+      // 라이브러리가 아직 없다면 한 번 더 시도
+      if (!XLSX_LIB) {
+        XLSX_LIB = await import("xlsx");
+      }
 
-      // 1. 선택한 발행일자 기간 데이터 가져오기
       const { data, error } = await supabase
         .from('pallets')
         .select('*')
@@ -59,7 +75,6 @@ export default function PalletsPage() {
         return alert("해당 기간에 데이터가 없어, 갱미야!");
       }
 
-      // 2. 엑셀 데이터 매핑
       const excelData = data.map(item => ({
         "상태": item.status,
         "구분": item.type,
@@ -74,17 +89,15 @@ export default function PalletsPage() {
         "작성일시": formatDate(item.created_at)
       }));
 
-      // 3. 엑셀 파일 생성
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "전표내역");
+      const worksheet = XLSX_LIB.utils.json_to_sheet(excelData);
+      const workbook = XLSX_LIB.utils.book_new();
+      XLS_LIB.utils.book_append_sheet(workbook, worksheet, "전표내역");
 
-      // 4. 다운로드
-      XLSX.writeFile(workbook, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
+      XLSX_LIB.writeFile(workbook, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
       setShowExcelModal(false);
     } catch (err) {
       console.error(err);
-      alert("엑셀 라이브러리를 불러오는데 실패했어!");
+      alert("엑셀 생성 중 오류가 났어. 새로고침 후 다시 해봐!");
     }
   };
 
@@ -177,6 +190,7 @@ export default function PalletsPage() {
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
+      {/* 🔵 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
@@ -278,13 +292,13 @@ export default function PalletsPage() {
           </table>
         </div>
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">PREV</button>
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
           <div className="flex gap-1">
             {[...Array(totalPages)].map((_, i) => (
-              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-slate-400 hover:bg-slate-100'}`}>{i + 1}</button>
+              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-100' : 'bg-white text-slate-400 hover:bg-slate-100'}`}>{i + 1}</button>
             ))}
           </div>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">NEXT</button>
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">NEXT</button>
         </div>
       </div>
 
