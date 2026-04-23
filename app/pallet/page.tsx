@@ -17,13 +17,20 @@ export default function PalletsPage() {
   const today = new Date().toISOString().split('T')[0];
 
   const [filters, setFilters] = useState({
-    created_start: "", created_end: "",
-    issue_start: "", issue_end: "",
-    status: "" // ✨ 상태 필터 상태 추가
+    created_start: "", created_end: "", issue_start: "", issue_end: "", status: ""
   });
 
+  // 📝 수량 필드를 규격별로 세분화했어
   const [formData, setFormData] = useState({
-    type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: ""
+    type: "출고", 
+    company_name: "", 
+    issue_date: today, 
+    kpp_n11_count: "", // KPP N11 수량
+    kpp_n12_count: "", // KPP N12 수량
+    kpp_number: "",    // KPP 번호 (통합)
+    aj_11a_count: "",  // AJ 11A 수량
+    aj_12a_count: "",  // AJ 12A 수량
+    aj_name: ""        // AJ 번호 (통합)
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -54,37 +61,13 @@ export default function PalletsPage() {
     if (!error) { alert("일괄 변경 성공! ✨"); setSelectedIds([]); fetchData(); }
   };
 
-  const setQuickDate = (type: string, filterType: 'created' | 'issue') => {
-    const now = new Date();
-    let start = new Date();
-    let end = new Date();
-    switch (type) {
-      case "today": break;
-      case "yesterday": start.setDate(now.getDate() - 1); end.setDate(now.getDate() - 1); break;
-      case "tomorrow": start.setDate(now.getDate() + 1); end.setDate(now.getDate() + 1); break;
-      case "week": start.setDate(now.getDate() - 7); break;
-      case "1month": start.setMonth(now.getMonth() - 1); break;
-      case "2month": start.setMonth(now.getMonth() - 2); break;
-      case "3month": start.setMonth(now.getMonth() - 3); break;
-      default: return;
-    }
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
-    if (filterType === 'created') setFilters(prev => ({ ...prev, created_start: startStr, created_end: endStr }));
-    else setFilters(prev => ({ ...prev, issue_start: startStr, issue_end: endStr }));
-  };
-
   const handleSearch = () => {
     let result = [...list];
-    // 1. 작성일자 필터
     if (filters.created_start) result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
     if (filters.created_end) result = result.filter(item => item.created_at.split('T')[0] <= filters.created_end);
-    // 2. 발행일자 필터
     if (filters.issue_start) result = result.filter(item => item.issue_date && item.issue_date >= filters.issue_start);
     if (filters.issue_end) result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
-    // 3. ✨ 상태 필터 적용
     if (filters.status) result = result.filter(item => item.status === filters.status);
-
     setFilteredList(result);
     setCurrentPage(1);
     setSelectedIds([]); 
@@ -108,27 +91,25 @@ export default function PalletsPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: number, currentStatus: string) => {
-    const newStatus = currentStatus === '확인완료' ? '미확인' : '확인완료';
-    await supabase.from('pallets').update({ status: newStatus }).eq('id', id);
-    fetchData();
-  };
-
   const closeModal = () => {
     setShowModal(false); setIsEdit(false); setTargetId(null);
-    setFormData({ type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: "" });
+    setFormData({ type: "출고", company_name: "", issue_date: today, kpp_n11_count: "", kpp_n12_count: "", kpp_number: "", aj_11a_count: "", aj_12a_count: "", aj_name: "" });
   };
 
   const openEditModal = (item: any) => {
     setIsEdit(true); setTargetId(item.id);
-    setFormData({ type: item.type, company_name: item.company_name, issue_date: item.issue_date || today, kpp_count: item.kpp_count, kpp_number: item.kpp_number, aj_count: item.aj_count, aj_name: item.aj_name });
+    setFormData({ 
+      type: item.type, 
+      company_name: item.company_name, 
+      issue_date: item.issue_date || today, 
+      kpp_n11_count: item.kpp_n11_count || "", 
+      kpp_n12_count: item.kpp_n12_count || "", 
+      kpp_number: item.kpp_number || "", 
+      aj_11a_count: item.aj_11a_count || "", 
+      aj_12a_count: item.aj_12a_count || "", 
+      aj_name: item.aj_name || "" 
+    });
     setShowModal(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if(!confirm("진짜 삭제할 거야?")) return;
-    await supabase.from('pallets').delete().eq('id', id);
-    fetchData();
   };
 
   const formatDate = (dateString: string) => {
@@ -156,141 +137,139 @@ export default function PalletsPage() {
         <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm">+ 신규 전표 등록</button>
       </div>
 
-      {/* 🔍 검색 필터 영역 */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date (작성일)</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date</p>
             <div className="flex items-center gap-3">
               <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
               <span className="text-slate-300">~</span>
               <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
-              <select onChange={(e) => setQuickDate(e.target.value, 'created')} className="p-3 bg-slate-50 rounded-xl border-none text-[10px] font-black outline-none text-blue-600">
-                <option value="">간편 선택</option>
-                <option value="today">오늘</option><option value="yesterday">어제</option><option value="tomorrow">내일</option><option value="week">최근 한주</option><option value="1month">최근 한달</option><option value="2month">최근 두달</option><option value="3month">최근 세달</option>
-              </select>
             </div>
           </div>
           <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Issue Date (발행일)</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Issue Date</p>
             <div className="flex items-center gap-3">
               <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_start} onChange={e => setFilters({...filters, issue_start: e.target.value})} />
               <span className="text-slate-300">~</span>
               <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
-              <select onChange={(e) => setQuickDate(e.target.value, 'issue')} className="p-3 bg-slate-50 rounded-xl border-none text-[10px] font-black outline-none text-green-600">
-                <option value="">간편 선택</option>
-                <option value="today">오늘</option><option value="yesterday">어제</option><option value="tomorrow">내일</option><option value="week">최근 한주</option><option value="1month">최근 한달</option><option value="2month">최근 두달</option><option value="3month">최근 세달</option>
-              </select>
             </div>
           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-50">
-          {/* ✨ 상태 필터 콤보박스 추가 */}
-          <select 
-            value={filters.status} 
-            onChange={e => setFilters({...filters, status: e.target.value})}
-            className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black outline-none text-slate-600 min-w-[120px]"
-          >
-            <option value="">상태 전체</option>
-            <option value="미확인">미확인</option>
-            <option value="확인완료">확인완료</option>
+        <div className="flex gap-3 pt-4 border-t border-slate-50">
+          <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
+            <option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인완료">확인완료</option>
           </select>
-
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">SEARCH FILTER 🔍</button>
-          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all border border-slate-100">RESET DATES</button>
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
+          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all border border-slate-100">RESET</button>
         </div>
       </div>
 
       {/* 테이블 섹션 */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-xs">
         {selectedIds.length > 0 && (
-          <div className="bg-blue-600 px-8 py-4 flex justify-between items-center animate-in slide-in-from-top duration-300">
-            <p className="text-white font-black text-sm">{selectedIds.length}개 항목 선택됨</p>
+          <div className="bg-blue-600 px-8 py-4 flex justify-between items-center">
+            <p className="text-white font-black text-sm">{selectedIds.length}개 선택됨</p>
             <div className="flex gap-2">
-              <button onClick={() => handleBulkStatusUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] hover:bg-blue-50">선택 확인완료 처리</button>
-              <button onClick={() => handleBulkStatusUpdate('미확인')} className="bg-blue-400 text-white px-4 py-2 rounded-xl font-black text-[10px] hover:bg-blue-500">선택 미확인 처리</button>
-              <button onClick={() => setSelectedIds([])} className="text-blue-100 px-2 py-2 font-bold text-[10px] hover:text-white">취소</button>
+              <button onClick={() => handleBulkStatusUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px]">확인완료 처리</button>
+              <button onClick={() => handleBulkStatusUpdate('미확인')} className="bg-blue-400 text-white px-4 py-2 rounded-xl font-black text-[10px]">미확인 처리</button>
             </div>
           </div>
         )}
-
-        <table className="w-full text-xs">
+        <table className="w-full">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
             <tr>
-              <th className="p-6 text-center w-12">
-                <input type="checkbox" className="w-4 h-4 rounded accent-blue-600 cursor-pointer" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} />
-              </th>
+              <th className="p-6 text-center w-12"><input type="checkbox" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
               <th className="p-6 text-left">상태</th>
               <th className="p-6 text-left">작성일자</th>
               <th className="p-6 text-left">발행일 / 구분</th>
-              <th className="p-6 text-left">KPP 정보</th>
-              <th className="p-6 text-left">AJ 정보</th>
+              <th className="p-6 text-left">KPP (N11 / N12)</th>
+              <th className="p-6 text-left">AJ (11A / 12A)</th>
               <th className="p-6 text-center">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 font-black">
             {currentItems.map((item) => (
               <tr key={item.id} className={`hover:bg-slate-50 transition-all ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`}>
+                <td className="p-6 text-center"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
+                <td className="p-6"><button className={`px-4 py-1.5 rounded-full text-[10px] ${item.status === '미확인' ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-500'}`}>{item.status}</button></td>
+                <td className="p-6 text-slate-400 text-[10px]">{formatDate(item.created_at)}</td>
+                <td className="p-6"><p>{item.issue_date}</p><p className={`text-[11px] ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p></td>
+                <td className="p-6 text-blue-600 font-bold">{item.kpp_n11_count || 0} / {item.kpp_n12_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
+                <td className="p-6 text-green-500 font-bold">{item.aj_11a_count || 0} / {item.aj_12a_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
                 <td className="p-6 text-center">
-                  <input type="checkbox" className="w-4 h-4 rounded accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} />
-                </td>
-                <td className="p-6">
-                  <button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' : 'bg-green-50 text-green-500 border border-green-100'}`}>{item.status}</button>
-                </td>
-                <td className="p-6"><p className="text-slate-400 text-[10px]">{formatDate(item.created_at)}</p></td>
-                <td className="p-6"><p className="text-slate-800 text-sm">{item.issue_date || "날짜미지정"}</p><p className={`text-[11px] mt-0.5 ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p></td>
-                <td className="p-6 text-blue-600 text-sm">{item.kpp_count || "0매"}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
-                <td className="p-6 text-green-500 text-sm">{item.aj_count || "0매"}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
-                <td className="p-6 text-center">
-                   <div className="flex gap-4 justify-center text-slate-300 font-black">
-                      <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
-                      <button onClick={() => handleDelete(item.id)} className="hover:text-red-400">삭제</button>
-                   </div>
+                   <div className="flex gap-4 justify-center text-slate-300"><button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button></div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {/* 페이지네이션 */}
-        <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">PREV</button>
-          <div className="flex gap-1">
-            {[...Array(totalPages)].map((_, i) => (
-              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-slate-400'}`}>{i + 1}</button>
-            ))}
-          </div>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">NEXT</button>
-        </div>
       </div>
 
-      {/* 모달 (기존 유지) */}
+      {/* 🟢 신규/수정 모달 (요청하신 디자인 반영!) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
             <h2 className="text-xl font-black mb-6 text-slate-800">{isEdit ? 'EDIT SLIP' : '신규 전표'}</h2>
-            <div className="space-y-4">
-              <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
-                {['출고', '입고'].map(t => (
-                  <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
-                ))}
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] text-slate-400 ml-2 uppercase font-black tracking-widest">Issue Date</p>
+            
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
+                  {['출고', '입고'].map(t => (
+                    <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
+                  ))}
+                </div>
                 <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none text-blue-600" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
               </div>
+
               <input placeholder="업체명" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="KPP 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none" value={formData.kpp_count} onChange={e => setFormData({...formData, kpp_count: e.target.value})} />
-                <input placeholder="KPP 번호" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px] outline-none" value={formData.kpp_number} onChange={e => setFormData({...formData, kpp_number: e.target.value})} />
+
+              {/* 📊 KPP 수량 섹션 */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-1 space-y-3">
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
+                    <span className="text-[10px] font-black text-blue-600 w-12">N11</span>
+                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.kpp_n11_count} onChange={e => setFormData({...formData, kpp_n11_count: e.target.value})} />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
+                    <span className="text-[10px] font-black text-blue-600 w-12">N12</span>
+                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.kpp_n12_count} onChange={e => setFormData({...formData, kpp_n12_count: e.target.value})} />
+                  </div>
+                </div>
+                <textarea 
+                  placeholder="KPP 전표번호" 
+                  className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full"
+                  value={formData.kpp_number}
+                  onChange={e => setFormData({...formData, kpp_number: e.target.value})}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="AJ 수량" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none" value={formData.aj_count} onChange={e => setFormData({...formData, aj_count: e.target.value})} />
-                <input placeholder="AJ 업체/번호" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-[10px] outline-none" value={formData.aj_name} onChange={e => setFormData({...formData, aj_name: e.target.value})} />
+
+              {/* 📊 AJ 수량 섹션 */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-1 space-y-3">
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
+                    <span className="text-[10px] font-black text-green-600 w-12">11A</span>
+                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.aj_11a_count} onChange={e => setFormData({...formData, aj_11a_count: e.target.value})} />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
+                    <span className="text-[10px] font-black text-green-600 w-12">12A</span>
+                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.aj_12a_count} onChange={e => setFormData({...formData, aj_12a_count: e.target.value})} />
+                  </div>
+                </div>
+                <textarea 
+                  placeholder="AJ 전표번호" 
+                  className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full"
+                  value={formData.aj_name}
+                  onChange={e => setFormData({...formData, aj_name: e.target.value})}
+                />
               </div>
-              <div className="flex gap-3 mt-4">
-                <button onClick={handleSubmit} className="flex-1 bg-[#1a1c2e] text-white p-4 rounded-[1.2rem] font-black shadow-lg hover:bg-black transition-all text-sm">{isEdit ? '수정하기' : '등록하기'}</button>
-                <button onClick={closeModal} className="bg-slate-100 text-slate-400 px-6 rounded-[1.2rem] font-black text-sm">취소</button>
+
+              <div className="flex gap-3 pt-4">
+                <button onClick={handleSubmit} className="flex-1 bg-[#1a1c2e] text-white p-5 rounded-[1.5rem] font-black shadow-lg hover:bg-black transition-all">
+                  {isEdit ? '전표 수정하기' : '전표 등록하기'}
+                </button>
+                <button onClick={closeModal} className="bg-slate-100 text-slate-400 px-8 rounded-[1.5rem] font-black">취소</button>
               </div>
             </div>
           </div>
