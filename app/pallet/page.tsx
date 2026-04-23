@@ -19,7 +19,7 @@ export default function PalletsPage() {
   const [filters, setFilters] = useState({
     created_start: "", created_end: "", issue_start: "", issue_end: "", 
     status: "",
-    type: "" // ✨ 입출고 타입 필터 추가
+    type: "" 
   });
 
   const [formData, setFormData] = useState({
@@ -69,7 +69,6 @@ export default function PalletsPage() {
     if (filters.issue_start) result = result.filter(item => item.issue_date && item.issue_date >= filters.issue_start);
     if (filters.issue_end) result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
     if (filters.status) result = result.filter(item => item.status === filters.status);
-    // ✨ 입출고 타입 필터 로직
     if (filters.type) result = result.filter(item => item.type === filters.type);
 
     setFilteredList(result);
@@ -168,11 +167,9 @@ export default function PalletsPage() {
           </div>
         </div>
         <div className="flex gap-3 pt-4 border-t border-slate-50">
-          {/* ✨ 상태 필터 */}
           <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
             <option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인완료">확인완료</option>
           </select>
-          {/* ✨ 입출고 필터 추가 */}
           <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
             <option value="">구분 전체</option><option value="출고">출고만 보기</option><option value="입고">입고만 보기</option>
           </select>
@@ -192,44 +189,49 @@ export default function PalletsPage() {
             </div>
           </div>
         )}
-        <table className="w-full">
-          <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
-            <tr>
-              <th className="p-6 text-center w-12"><input type="checkbox" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
-              <th className="p-6 text-left">상태</th>
-              <th className="p-6 text-left">작성일자</th>
-              <th className="p-6 text-left w-20">구분</th> {/* ✨ 구분 컬럼 추가 */}
-              <th className="p-6 text-left">발행일 / 업체명</th>
-              <th className="p-6 text-left">KPP (N11 / N12)</th>
-              <th className="p-6 text-left">AJ (11A / 12A)</th>
-              <th className="p-6 text-center">관리</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50 font-black">
-            {currentItems.map((item) => (
-              <tr key={item.id} className={`hover:bg-slate-50 transition-all ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`}>
-                <td className="p-6 text-center"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
-                <td className="p-6"><button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] ${item.status === '미확인' ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-500'}`}>{item.status}</button></td>
-                <td className="p-6 text-slate-400 text-[10px]">{formatDate(item.created_at)}</td>
-                {/* ✨ 출고/입고 배지 표시 */}
-                <td className="p-6">
-                  <span className={`px-3 py-1 rounded-lg text-[10px] ${item.type === '출고' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-blue-50 text-blue-500 border border-blue-100'}`}>
-                    {item.type}
-                  </span>
-                </td>
-                <td className="p-6"><p>{item.issue_date}</p><p className="text-slate-500 text-[11px]">{item.company_name}</p></td>
-                <td className="p-6 text-blue-600 font-bold">{item.kpp_n11_count || 0} / {item.kpp_n12_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
-                <td className="p-6 text-green-500 font-bold">{item.aj_11a_count || 0} / {item.aj_12a_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
-                <td className="p-6 text-center">
-                   <div className="flex gap-4 justify-center text-slate-300">
-                      <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
-                      <button onClick={() => handleDelete(item.id)} className="hover:text-red-400">삭제</button>
-                   </div>
-                </td>
+        {/* ✨ table-auto를 사용하여 글자 길이에 맞춰 너비 자동 조절 */}
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
+              <tr>
+                <th className="p-6 text-center w-12"><input type="checkbox" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
+                <th className="p-6 text-left whitespace-nowrap">상태</th>
+                <th className="p-6 text-left whitespace-nowrap">작성일자</th>
+                <th className="p-6 text-center whitespace-nowrap">구분</th> 
+                <th className="p-6 text-left whitespace-nowrap">발행일 / 업체명</th>
+                <th className="p-6 text-left whitespace-nowrap">KPP (N11 / N12)</th>
+                <th className="p-6 text-left whitespace-nowrap">AJ (11A / 12A)</th>
+                <th className="p-6 text-center whitespace-nowrap">관리</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-50 font-black">
+              {currentItems.map((item) => (
+                <tr key={item.id} className={`hover:bg-slate-50 transition-all ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`}>
+                  <td className="p-6 text-center"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
+                  <td className="p-6"><button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap ${item.status === '미확인' ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-500'}`}>{item.status}</button></td>
+                  <td className="p-6 text-slate-400 text-[10px] whitespace-nowrap">{formatDate(item.created_at)}</td>
+                  
+                  {/* ✨ 구분 배지 디자인 수정 (텍스트가 안 잘리도록 최적화) */}
+                  <td className="p-6 text-center">
+                    <span className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black whitespace-nowrap ${item.type === '출고' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-blue-50 text-blue-500 border border-blue-100'}`}>
+                      {item.type}
+                    </span>
+                  </td>
+                  
+                  <td className="p-6 whitespace-nowrap"><p>{item.issue_date}</p><p className="text-slate-500 text-[11px]">{item.company_name}</p></td>
+                  <td className="p-6 text-blue-600 font-bold whitespace-nowrap">{item.kpp_n11_count || 0} / {item.kpp_n12_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
+                  <td className="p-6 text-green-500 font-bold whitespace-nowrap">{item.aj_11a_count || 0} / {item.aj_12a_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
+                  <td className="p-6 text-center">
+                    <div className="flex gap-4 justify-center text-slate-300">
+                        <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
+                        <button onClick={() => handleDelete(item.id)} className="hover:text-red-400">삭제</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
           <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
@@ -242,7 +244,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 모달 (기존 디자인 유지) */}
+      {/* 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
