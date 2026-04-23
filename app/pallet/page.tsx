@@ -20,17 +20,16 @@ export default function PalletsPage() {
     created_start: "", created_end: "", issue_start: "", issue_end: "", status: ""
   });
 
-  // 📝 수량 필드를 규격별로 세분화했어
   const [formData, setFormData] = useState({
     type: "출고", 
     company_name: "", 
     issue_date: today, 
-    kpp_n11_count: "", // KPP N11 수량
-    kpp_n12_count: "", // KPP N12 수량
-    kpp_number: "",    // KPP 번호 (통합)
-    aj_11a_count: "",  // AJ 11A 수량
-    aj_12a_count: "",  // AJ 12A 수량
-    aj_name: ""        // AJ 번호 (통합)
+    kpp_n11_count: "", 
+    kpp_n12_count: "", 
+    kpp_number: "", 
+    aj_11a_count: "", 
+    aj_12a_count: "", 
+    aj_name: "" 
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -91,6 +90,12 @@ export default function PalletsPage() {
     }
   };
 
+  const handleStatusUpdate = async (id: number, currentStatus: string) => {
+    const newStatus = currentStatus === '확인완료' ? '미확인' : '확인완료';
+    await supabase.from('pallets').update({ status: newStatus }).eq('id', id);
+    fetchData();
+  };
+
   const closeModal = () => {
     setShowModal(false); setIsEdit(false); setTargetId(null);
     setFormData({ type: "출고", company_name: "", issue_date: today, kpp_n11_count: "", kpp_n12_count: "", kpp_number: "", aj_11a_count: "", aj_12a_count: "", aj_name: "" });
@@ -99,17 +104,17 @@ export default function PalletsPage() {
   const openEditModal = (item: any) => {
     setIsEdit(true); setTargetId(item.id);
     setFormData({ 
-      type: item.type, 
-      company_name: item.company_name, 
-      issue_date: item.issue_date || today, 
-      kpp_n11_count: item.kpp_n11_count || "", 
-      kpp_n12_count: item.kpp_n12_count || "", 
-      kpp_number: item.kpp_number || "", 
-      aj_11a_count: item.aj_11a_count || "", 
-      aj_12a_count: item.aj_12a_count || "", 
-      aj_name: item.aj_name || "" 
+      type: item.type, company_name: item.company_name, issue_date: item.issue_date || today, 
+      kpp_n11_count: item.kpp_n11_count || "", kpp_n12_count: item.kpp_n12_count || "", kpp_number: item.kpp_number || "", 
+      aj_11a_count: item.aj_11a_count || "", aj_12a_count: item.aj_12a_count || "", aj_name: item.aj_name || "" 
     });
     setShowModal(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if(!confirm("진짜 삭제할 거야?")) return;
+    const { error } = await supabase.from('pallets').delete().eq('id', id);
+    if (!error) fetchData();
   };
 
   const formatDate = (dateString: string) => {
@@ -193,26 +198,40 @@ export default function PalletsPage() {
             {currentItems.map((item) => (
               <tr key={item.id} className={`hover:bg-slate-50 transition-all ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`}>
                 <td className="p-6 text-center"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
-                <td className="p-6"><button className={`px-4 py-1.5 rounded-full text-[10px] ${item.status === '미확인' ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-500'}`}>{item.status}</button></td>
+                <td className="p-6"><button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] ${item.status === '미확인' ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-500'}`}>{item.status}</button></td>
                 <td className="p-6 text-slate-400 text-[10px]">{formatDate(item.created_at)}</td>
                 <td className="p-6"><p>{item.issue_date}</p><p className={`text-[11px] ${item.type === '출고' ? 'text-red-500' : 'text-blue-500'}`}>{item.company_name}</p></td>
                 <td className="p-6 text-blue-600 font-bold">{item.kpp_n11_count || 0} / {item.kpp_n12_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.kpp_number || "-"}</p></td>
                 <td className="p-6 text-green-500 font-bold">{item.aj_11a_count || 0} / {item.aj_12a_count || 0}<p className="text-slate-400 text-[10px] font-normal">{item.aj_name || "-"}</p></td>
                 <td className="p-6 text-center">
-                   <div className="flex gap-4 justify-center text-slate-300"><button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button></div>
+                   <div className="flex gap-4 justify-center text-slate-300">
+                      <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
+                      {/* ❌ 삭제 버튼 복구 완료! */}
+                      <button onClick={() => handleDelete(item.id)} className="hover:text-red-400">삭제</button>
+                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {/* 📄 페이지네이션 복구 완료! */}
+        <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
+          <div className="flex gap-1">
+            {[...Array(totalPages)].map((_, i) => (
+              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-100' : 'bg-white text-slate-400 hover:bg-slate-100'}`}>{i + 1}</button>
+            ))}
+          </div>
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">NEXT</button>
+        </div>
       </div>
 
-      {/* 🟢 신규/수정 모달 (요청하신 디자인 반영!) */}
+      {/* 🟢 모달 (기존 디자인 유지) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
             <h2 className="text-xl font-black mb-6 text-slate-800">{isEdit ? 'EDIT SLIP' : '신규 전표'}</h2>
-            
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
@@ -222,53 +241,23 @@ export default function PalletsPage() {
                 </div>
                 <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none text-blue-600" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
               </div>
-
               <input placeholder="업체명" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner outline-none" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
-
-              {/* 📊 KPP 수량 섹션 */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-1 space-y-3">
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
-                    <span className="text-[10px] font-black text-blue-600 w-12">N11</span>
-                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.kpp_n11_count} onChange={e => setFormData({...formData, kpp_n11_count: e.target.value})} />
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
-                    <span className="text-[10px] font-black text-blue-600 w-12">N12</span>
-                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.kpp_n12_count} onChange={e => setFormData({...formData, kpp_n12_count: e.target.value})} />
-                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-blue-600 w-12">N11</span><input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.kpp_n11_count} onChange={e => setFormData({...formData, kpp_n11_count: e.target.value})} /></div>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-blue-600 w-12">N12</span><input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.kpp_n12_count} onChange={e => setFormData({...formData, kpp_n12_count: e.target.value})} /></div>
                 </div>
-                <textarea 
-                  placeholder="KPP 전표번호" 
-                  className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full"
-                  value={formData.kpp_number}
-                  onChange={e => setFormData({...formData, kpp_number: e.target.value})}
-                />
+                <textarea placeholder="KPP 전표번호" className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full" value={formData.kpp_number} onChange={e => setFormData({...formData, kpp_number: e.target.value})} />
               </div>
-
-              {/* 📊 AJ 수량 섹션 */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-1 space-y-3">
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
-                    <span className="text-[10px] font-black text-green-600 w-12">11A</span>
-                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.aj_11a_count} onChange={e => setFormData({...formData, aj_11a_count: e.target.value})} />
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner">
-                    <span className="text-[10px] font-black text-green-600 w-12">12A</span>
-                    <input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.aj_12a_count} onChange={e => setFormData({...formData, aj_12a_count: e.target.value})} />
-                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-green-600 w-12">11A</span><input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.aj_11a_count} onChange={e => setFormData({...formData, aj_11a_count: e.target.value})} /></div>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-green-600 w-12">12A</span><input placeholder="수량" className="bg-transparent border-none font-bold text-sm outline-none w-full" value={formData.aj_12a_count} onChange={e => setFormData({...formData, aj_12a_count: e.target.value})} /></div>
                 </div>
-                <textarea 
-                  placeholder="AJ 전표번호" 
-                  className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full"
-                  value={formData.aj_name}
-                  onChange={e => setFormData({...formData, aj_name: e.target.value})}
-                />
+                <textarea placeholder="AJ 전표번호" className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full" value={formData.aj_name} onChange={e => setFormData({...formData, aj_name: e.target.value})} />
               </div>
-
               <div className="flex gap-3 pt-4">
-                <button onClick={handleSubmit} className="flex-1 bg-[#1a1c2e] text-white p-5 rounded-[1.5rem] font-black shadow-lg hover:bg-black transition-all">
-                  {isEdit ? '전표 수정하기' : '전표 등록하기'}
-                </button>
+                <button onClick={handleSubmit} className="flex-1 bg-[#1a1c2e] text-white p-5 rounded-[1.5rem] font-black shadow-lg hover:bg-black transition-all">{isEdit ? '전표 수정하기' : '전표 등록하기'}</button>
                 <button onClick={closeModal} className="bg-slate-100 text-slate-400 px-8 rounded-[1.5rem] font-black">취소</button>
               </div>
             </div>
