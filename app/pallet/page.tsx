@@ -6,7 +6,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 
 export default function PalletsPage() {
   const [list, setList] = useState<any[]>([]);
-  const [filteredList, setFilteredList] = useState<any[]>([]); // ✨ 필터링된 결과를 담을 상태
+  const [filteredList, setFilteredList] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false); 
   const [targetId, setTargetId] = useState<number | null>(null); 
@@ -16,12 +16,9 @@ export default function PalletsPage() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // 🔍 검색 필터 상태 (작성일자 시작/종료, 발행일자 시작/종료)
   const [filters, setFilters] = useState({
-    created_start: "",
-    created_end: "",
-    issue_start: "",
-    issue_end: ""
+    created_start: "", created_end: "",
+    issue_start: "", issue_end: ""
   });
 
   const [formData, setFormData] = useState({
@@ -34,39 +31,56 @@ export default function PalletsPage() {
     const { data, error } = await supabase.from('pallets').select('*').order('created_at', { ascending: false });
     if (!error) {
       setList(data || []);
-      setFilteredList(data || []); // 초기에는 전체 리스트 보여줌
+      setFilteredList(data || []);
     }
   };
 
-  // 🔍 검색 버튼 클릭 시 실행되는 필터 로직
+  // 🔍 날짜 자동 계산 함수
+  const setQuickDate = (type: string, filterType: 'created' | 'issue') => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (type) {
+      case "today": break;
+      case "yesterday": 
+        start.setDate(now.getDate() - 1); 
+        end.setDate(now.getDate() - 1); 
+        break;
+      case "tomorrow":
+        start.setDate(now.getDate() + 1);
+        end.setDate(now.getDate() + 1);
+        break;
+      case "week": start.setDate(now.getDate() - 7); break;
+      case "1month": start.setMonth(now.getMonth() - 1); break;
+      case "2month": start.setMonth(now.getMonth() - 2); break;
+      case "3month": start.setMonth(now.getMonth() - 3); break;
+      default: return;
+    }
+
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+
+    if (filterType === 'created') {
+      setFilters(prev => ({ ...prev, created_start: startStr, created_end: endStr }));
+    } else {
+      setFilters(prev => ({ ...prev, issue_start: startStr, issue_end: endStr }));
+    }
+  };
+
   const handleSearch = () => {
     let result = [...list];
-
-    // 1. 작성일자(created_at) 필터
-    if (filters.created_start) {
-      result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
-    }
-    if (filters.created_end) {
-      result = result.filter(item => item.created_at.split('T')[0] <= filters.created_end);
-    }
-
-    // 2. 발행일자(issue_date) 필터
-    if (filters.issue_start) {
-      result = result.filter(item => item.issue_date && item.issue_date >= filters.issue_start);
-    }
-    if (filters.issue_end) {
-      result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
-    }
-
+    if (filters.created_start) result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
+    if (filters.created_end) result = result.filter(item => item.created_at.split('T')[0] <= filters.created_end);
+    if (filters.issue_start) result = result.filter(item => item.issue_date && item.issue_date >= filters.issue_start);
+    if (filters.issue_end) result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
     setFilteredList(result);
-    setCurrentPage(1); // 검색 시 첫 페이지로 이동
+    setCurrentPage(1);
   };
 
-  // 🔄 필터 초기화
+  // 🔄 리셋 버튼: 날짜 값만 비움 (검색은 유지됨)
   const resetFilters = () => {
     setFilters({ created_start: "", created_end: "", issue_start: "", issue_end: "" });
-    setFilteredList(list);
-    setCurrentPage(1);
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -87,31 +101,25 @@ export default function PalletsPage() {
 
   const handleStatusUpdate = async (id: number, currentStatus: string) => {
     const newStatus = currentStatus === '확인완료' ? '미확인' : '확인완료';
-    const { error } = await supabase.from('pallets').update({ status: newStatus }).eq('id', id);
-    if (!error) fetchData();
+    await supabase.from('pallets').update({ status: newStatus }).eq('id', id);
+    fetchData();
   };
 
   const openEditModal = (item: any) => {
-    setIsEdit(true);
-    setTargetId(item.id);
-    setFormData({
-      type: item.type, company_name: item.company_name, issue_date: item.issue_date || today,
-      kpp_count: item.kpp_count, kpp_number: item.kpp_number, aj_count: item.aj_count, aj_name: item.aj_name
-    });
+    setIsEdit(true); setTargetId(item.id);
+    setFormData({ type: item.type, company_name: item.company_name, issue_date: item.issue_date || today, kpp_count: item.kpp_count, kpp_number: item.kpp_number, aj_count: item.aj_count, aj_name: item.aj_name });
     setShowModal(true);
   };
 
   const closeModal = () => {
-    setShowModal(false);
-    setIsEdit(false);
-    setTargetId(null);
+    setShowModal(false); setIsEdit(false); setTargetId(null);
     setFormData({ type: "출고", company_name: "", issue_date: today, kpp_count: "", kpp_number: "", aj_count: "", aj_name: "" });
   };
 
   const handleDelete = async (id: number) => {
     if(!confirm("진짜 삭제할 거야?")) return;
-    const { error } = await supabase.from('pallets').delete().eq('id', id);
-    if (!error) fetchData();
+    await supabase.from('pallets').delete().eq('id', id);
+    fetchData();
   };
 
   const formatDate = (dateString: string) => {
@@ -132,44 +140,64 @@ export default function PalletsPage() {
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-              파렛트 <span className="text-blue-600">전표</span>
-            </h1>
-            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
-              천안센터 <span className="text-blue-600/60 font-black">파렛트 전표 관리 시스템</span>
-            </p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">파렛트 <span className="text-blue-600">전표</span></h1>
+            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">천안센터 <span className="text-blue-600/60 font-black">파렛트 전표 관리 시스템</span></p>
           </div>
         </div>
         <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm">+ 신규 전표 등록</button>
       </div>
 
       {/* 🔍 검색 필터 영역 */}
-      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-8 flex flex-wrap items-end gap-6">
-        <div className="space-y-2">
-          <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date (작성일)</p>
-          <div className="flex items-center gap-2">
-            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
-            <span className="text-slate-300">~</span>
-            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
+      <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
+        <div className="flex flex-wrap gap-10">
+          {/* 작성일자 필터 */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date (작성일)</p>
+            <div className="flex items-center gap-3">
+              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
+              <span className="text-slate-300">~</span>
+              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
+              <select onChange={(e) => setQuickDate(e.target.value, 'created')} className="p-3 bg-slate-50 rounded-xl border-none text-[10px] font-black outline-none text-blue-600">
+                <option value="">간편 선택</option>
+                <option value="today">오늘</option>
+                <option value="yesterday">어제</option>
+                <option value="tomorrow">내일</option>
+                <option value="week">최근 한주</option>
+                <option value="1month">최근 한달</option>
+                <option value="2month">최근 두달</option>
+                <option value="3month">최근 세달</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 발행일자 필터 */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Issue Date (발행일)</p>
+            <div className="flex items-center gap-3">
+              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_start} onChange={e => setFilters({...filters, issue_start: e.target.value})} />
+              <span className="text-slate-300">~</span>
+              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
+              <select onChange={(e) => setQuickDate(e.target.value, 'issue')} className="p-3 bg-slate-50 rounded-xl border-none text-[10px] font-black outline-none text-green-600">
+                <option value="">간편 선택</option>
+                <option value="today">오늘</option>
+                <option value="yesterday">어제</option>
+                <option value="tomorrow">내일</option>
+                <option value="week">최근 한주</option>
+                <option value="1month">최근 한달</option>
+                <option value="2month">최근 두달</option>
+                <option value="3month">최근 세달</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Issue Date (발행일)</p>
-          <div className="flex items-center gap-2">
-            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_start} onChange={e => setFilters({...filters, issue_start: e.target.value})} />
-            <span className="text-slate-300">~</span>
-            <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-black transition-all">SEARCH</button>
-          <button onClick={resetFilters} className="bg-slate-100 text-slate-400 px-6 py-3 rounded-xl font-black text-xs hover:bg-slate-200 transition-all">RESET</button>
+        <div className="flex gap-3 pt-2 border-t border-slate-50">
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">SEARCH FILTER 🔍</button>
+          <button onClick={resetFilters} className="bg-slate-100 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all">RESET DATES</button>
         </div>
       </div>
 
-      {/* 테이블 */}
+      {/* 테이블 섹션 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b text-[10px] uppercase tracking-widest">
@@ -186,9 +214,7 @@ export default function PalletsPage() {
             {currentItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 transition-all">
                 <td className="p-6">
-                  <button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' : 'bg-green-50 text-green-500 border border-green-100'}`}>
-                    {item.status}
-                  </button>
+                  <button onClick={() => handleStatusUpdate(item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] transition-all font-black ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 border border-orange-100 hover:bg-orange-500 hover:text-white' : 'bg-green-50 text-green-500 border border-green-100'}`}>{item.status}</button>
                 </td>
                 <td className="p-6"><p className="text-slate-400 text-[10px]">{formatDate(item.created_at)}</p></td>
                 <td className="p-6">
@@ -213,8 +239,7 @@ export default function PalletsPage() {
             ))}
           </tbody>
         </table>
-
-        {/* 페이지네이션 */}
+        {/* 페이지네이션 (생략 - 위와 동일) */}
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
           <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
           <div className="flex gap-1">
@@ -226,7 +251,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 모달 (생략 - 기존 코드 유지) */}
+      {/* 모달 섹션 (기존 코드 유지) */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
