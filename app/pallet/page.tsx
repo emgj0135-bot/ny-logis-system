@@ -1,9 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-
-// ✅ 라이브러리를 담아둘 전역 변수
-let XLSX_MODULE: any = null;
+import { saveAs } from "file-saver"; // ✨ 파일 저장을 도와주는 친구 추가
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -19,11 +17,12 @@ export default function PalletsPage() {
   const itemsPerPage = 10;
   const today = new Date().toISOString().split('T')[0];
 
+  // ✨ 엑셀 모달 및 기간 상태
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
   const [filters, setFilters] = useState({
-    created_start: "", created_end: "", issue_start: "", issue_end: "", status: "", type: ""
+    created_start: "", created_end: "", issue_start: "", issue_end: "", status: "", type: "" 
   });
 
   const [formData, setFormData] = useState({
@@ -32,9 +31,7 @@ export default function PalletsPage() {
     aj_11a_count: "", aj_12a_count: "", aj_name: "" 
   });
 
-  useEffect(() => { 
-    fetchData(); 
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     const { data, error } = await supabase.from('pallets').select('*').order('created_at', { ascending: false });
@@ -44,13 +41,11 @@ export default function PalletsPage() {
     }
   };
 
-  // 📥 엑셀 다운로드 실행 함수 (경로 에러 해결 버전)
+  // 📥 엑셀 다운로드 (가장 확실한 동적 로드 방식)
   const downloadExcel = async () => {
     try {
-      if (!XLSX_MODULE) {
-        // ✅ 62번 줄 에러 해결: 경로를 "xlsx/xlsx.mjs"로 변경해서 강제 인식
-        XLSX_MODULE = await import("xlsx/xlsx.mjs");
-      }
+      // ✅ 버튼 누를 때만 라이브러리 로드 (에러 원천 봉쇄)
+      const XLSX = await import("xlsx");
 
       const { data, error } = await supabase
         .from('pallets')
@@ -77,18 +72,23 @@ export default function PalletsPage() {
         "작성일시": formatDate(item.created_at)
       }));
 
-      const worksheet = XLSX_MODULE.utils.json_to_sheet(excelData);
-      const workbook = XLSX_MODULE.utils.book_new();
-      XLSX_MODULE.utils.book_append_sheet(workbook, worksheet, "전표내역");
-      XLSX_MODULE.writeFile(workbook, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "전표내역");
+
+      // ✅ 파일 생성 후 브라우저 다운로드
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const dataBlob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(dataBlob, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
       
       setShowExcelModal(false);
     } catch (err) {
       console.error(err);
-      alert("엑셀 라이브러리를 불러오지 못했어. 서버를 껐다 켜봐!");
+      alert("엑셀 기능을 불러오는 중 문제가 생겼어. 잠시 후 다시 시도해줘!");
     }
   };
 
+  // --- 기존의 기능들은 그대로 유지 ---
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
@@ -115,7 +115,6 @@ export default function PalletsPage() {
     if (filters.issue_end) result = result.filter(item => item.issue_date && item.issue_date <= filters.issue_end);
     if (filters.status) result = result.filter(item => item.status === filters.status);
     if (filters.type) result = result.filter(item => item.type === filters.type);
-
     setFilteredList(result);
     setCurrentPage(1);
     setSelectedIds([]); 
@@ -178,8 +177,6 @@ export default function PalletsPage() {
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
-      
-      {/* 🔵 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
@@ -189,13 +186,15 @@ export default function PalletsPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {/* ✨ 엑셀 다운로드 버튼 */}
           <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-green-100 hover:bg-green-700 transition-all text-sm">📊 엑셀 다운로드</button>
           <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm">+ 신규 전표 등록</button>
         </div>
       </div>
 
-      {/* 🔍 검색 필터 */}
+      {/* 필터 및 테이블 영역 (기존 완벽 코드 유지) */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
+        {/* ... (생략: 기존 필터 코드 그대로 사용) ... */}
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date</p>
@@ -221,13 +220,13 @@ export default function PalletsPage() {
           <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
             <option value="">구분 전체</option><option value="출고">출고만 보기</option><option value="입고">입고만 보기</option>
           </select>
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">SEARCH FILTER 🔍</button>
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
           <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all border border-slate-100">RESET</button>
         </div>
       </div>
 
-      {/* 테이블 섹션 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-xs">
+        {/* ... (생략: 기존 테이블 코드 그대로 사용) ... */}
         {selectedIds.length > 0 && (
           <div className="bg-blue-600 px-8 py-4 flex justify-between items-center animate-in slide-in-from-top duration-300">
             <p className="text-white font-black text-sm">{selectedIds.length}개 선택됨</p>
@@ -317,6 +316,7 @@ export default function PalletsPage() {
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
             <h2 className="text-xl font-black mb-6 text-slate-800">{isEdit ? 'EDIT SLIP' : '신규 전표'}</h2>
             <div className="space-y-6">
+              {/* ... (생략: 기존 모달 코드 그대로 사용) ... */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
                   {['출고', '입고'].map(t => (
