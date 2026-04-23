@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-// @ts-ignore
-import * as XLSX from "xlsx";
+
+// ✅ 오류를 일으키는 상단 임포트를 제거했어! 갱미야.
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -10,7 +10,7 @@ export default function PalletsPage() {
   const [list, setList] = useState<any[]>([]);
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [showExcelModal, setShowExcelModal] = useState(false); // ✨ 엑셀 기간 선택 모달 상태
+  const [showExcelModal, setShowExcelModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false); 
   const [targetId, setTargetId] = useState<number | null>(null); 
   
@@ -23,7 +23,6 @@ export default function PalletsPage() {
     created_start: "", created_end: "", issue_start: "", issue_end: "", status: "", type: ""
   });
 
-  // ✨ 엑셀 다운로드용 기간 상태
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
   const [formData, setFormData] = useState({
@@ -42,43 +41,51 @@ export default function PalletsPage() {
     }
   };
 
-  // 📥 엑셀 다운로드 실행 함수
+  // 📥 엑셀 다운로드 실행 함수 (수정된 버전)
   const downloadExcel = async () => {
-    // 1. 선택한 발행일자 기간에 해당하는 모든 데이터 가져오기
-    const { data, error } = await supabase
-      .from('pallets')
-      .select('*')
-      .gte('issue_date', excelRange.start)
-      .lte('issue_date', excelRange.end)
-      .order('issue_date', { ascending: true });
+    try {
+      // ✨ 빌드 에러 방지를 위해 버튼 클릭 시점에 라이브러리 로드
+      const XLSX = await import("xlsx");
 
-    if (error || !data || data.length === 0) {
-      return alert("해당 기간에 데이터가 없어, 갱미야!");
+      // 1. 선택한 발행일자 기간 데이터 가져오기
+      const { data, error } = await supabase
+        .from('pallets')
+        .select('*')
+        .gte('issue_date', excelRange.start)
+        .lte('issue_date', excelRange.end)
+        .order('issue_date', { ascending: true });
+
+      if (error || !data || data.length === 0) {
+        return alert("해당 기간에 데이터가 없어, 갱미야!");
+      }
+
+      // 2. 엑셀 데이터 매핑
+      const excelData = data.map(item => ({
+        "상태": item.status,
+        "구분": item.type,
+        "발행일자": item.issue_date,
+        "업체명": item.company_name,
+        "KPP N11": item.kpp_n11_count || 0,
+        "KPP N12": item.kpp_n12_count || 0,
+        "KPP 전표번호": item.kpp_number,
+        "AJ 11A": item.aj_11a_count || 0,
+        "AJ 12A": item.aj_12a_count || 0,
+        "AJ 전표번호": item.aj_name,
+        "작성일시": formatDate(item.created_at)
+      }));
+
+      // 3. 엑셀 파일 생성
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "전표내역");
+
+      // 4. 다운로드
+      XLSX.writeFile(workbook, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
+      setShowExcelModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("엑셀 라이브러리를 불러오는데 실패했어!");
     }
-
-    // 2. 엑셀에 들어갈 데이터 정리 (이름표 달아주기)
-    const excelData = data.map(item => ({
-      "상태": item.status,
-      "구분": item.type,
-      "발행일자": item.issue_date,
-      "업체명": item.company_name,
-      "KPP N11": item.kpp_n11_count || 0,
-      "KPP N12": item.kpp_n12_count || 0,
-      "KPP 전표번호": item.kpp_number,
-      "AJ 11A": item.aj_11a_count || 0,
-      "AJ 12A": item.aj_12a_count || 0,
-      "AJ 전표번호": item.aj_name,
-      "작성일시": formatDate(item.created_at)
-    }));
-
-    // 3. 워크북 및 시트 생성
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "전표내역");
-
-    // 4. 파일 다운로드
-    XLSX.writeFile(workbook, `파렛트전표_${excelRange.start}_${excelRange.end}.xlsx`);
-    setShowExcelModal(false);
   };
 
   const toggleSelect = (id: number) => {
@@ -170,7 +177,6 @@ export default function PalletsPage() {
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
-      {/* 🔵 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
@@ -180,7 +186,6 @@ export default function PalletsPage() {
           </div>
         </div>
         <div className="flex gap-3">
-          {/* ✨ 엑셀 변환 버튼 추가 */}
           <button 
             onClick={() => setShowExcelModal(true)} 
             className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-green-100 hover:bg-green-700 transition-all text-sm"
@@ -191,7 +196,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (중략 - 기존과 동일) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -223,7 +228,6 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 테이블 섹션 (중략 - 기존과 동일) */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-xs">
         {selectedIds.length > 0 && (
           <div className="bg-blue-600 px-8 py-4 flex justify-between items-center animate-in slide-in-from-top duration-300">
@@ -284,7 +288,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 📥 ✨ 엑셀 기간 선택 모달 추가 */}
+      {/* 📥 엑셀 기간 선택 모달 */}
       {showExcelModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
           <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
@@ -310,7 +314,7 @@ export default function PalletsPage() {
         </div>
       )}
 
-      {/* 🟢 신규/수정 모달 (중략 - 기존과 동일) */}
+      {/* 🟢 신규/수정 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
