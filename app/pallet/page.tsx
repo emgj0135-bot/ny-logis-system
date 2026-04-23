@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// ✅ 전역 변수로 선언해서 라이브러리 충돌을 방지해
+// ✅ 라이브러리를 담아둘 전역 변수
 let XLSX_MODULE: any = null;
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
@@ -19,32 +19,21 @@ export default function PalletsPage() {
   const itemsPerPage = 10;
   const today = new Date().toISOString().split('T')[0];
 
-  // ✨ 엑셀 관련 추가 상태
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
   const [filters, setFilters] = useState({
-    created_start: "", created_end: "", issue_start: "", issue_end: "", 
-    status: "",
-    type: "" 
+    created_start: "", created_end: "", issue_start: "", issue_end: "", status: "", type: ""
   });
 
   const [formData, setFormData] = useState({
-    type: "출고", 
-    company_name: "", 
-    issue_date: today, 
-    kpp_n11_count: "", 
-    kpp_n12_count: "", 
-    kpp_number: "", 
-    aj_11a_count: "", 
-    aj_12a_count: "", 
-    aj_name: "" 
+    type: "출고", company_name: "", issue_date: today, 
+    kpp_n11_count: "", kpp_n12_count: "", kpp_number: "", 
+    aj_11a_count: "", aj_12a_count: "", aj_name: "" 
   });
 
   useEffect(() => { 
     fetchData(); 
-    // 페이지 로드 시 라이브러리를 미리 준비하지만, 실패해도 전체가 멈추지 않게 함
-    import("xlsx").then(mod => { XLSX_MODULE = mod; }).catch(e => console.log("엑셀 대기 중.."));
   }, []);
 
   const fetchData = async () => {
@@ -55,11 +44,12 @@ export default function PalletsPage() {
     }
   };
 
-  // 📥 엑셀 다운로드 실행 함수 (기존 기능에 영향 주지 않음)
+  // 📥 엑셀 다운로드 실행 함수 (경로 에러 해결 버전)
   const downloadExcel = async () => {
     try {
       if (!XLSX_MODULE) {
-        XLSX_MODULE = await import("xlsx");
+        // ✅ 62번 줄 에러 해결: 경로를 "xlsx/xlsx.mjs"로 변경해서 강제 인식
+        XLSX_MODULE = await import("xlsx/xlsx.mjs");
       }
 
       const { data, error } = await supabase
@@ -94,7 +84,8 @@ export default function PalletsPage() {
       
       setShowExcelModal(false);
     } catch (err) {
-      alert("엑셀 기능을 불러오지 못했어. npm install xlsx 했는지 확인해줘!");
+      console.error(err);
+      alert("엑셀 라이브러리를 불러오지 못했어. 서버를 껐다 켜봐!");
     }
   };
 
@@ -198,13 +189,12 @@ export default function PalletsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {/* ✨ 엑셀 버튼 추가 */}
           <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-green-100 hover:bg-green-700 transition-all text-sm">📊 엑셀 다운로드</button>
           <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm">+ 신규 전표 등록</button>
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (생략 - 기존 코드 그대로) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -231,19 +221,19 @@ export default function PalletsPage() {
           <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
             <option value="">구분 전체</option><option value="출고">출고만 보기</option><option value="입고">입고만 보기</option>
           </select>
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">SEARCH FILTER 🔍</button>
           <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all border border-slate-100">RESET</button>
         </div>
       </div>
 
-      {/* 테이블 섹션 (기존 코드 그대로) */}
+      {/* 테이블 섹션 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-xs">
         {selectedIds.length > 0 && (
-          <div className="bg-blue-600 px-8 py-4 flex justify-between items-center">
+          <div className="bg-blue-600 px-8 py-4 flex justify-between items-center animate-in slide-in-from-top duration-300">
             <p className="text-white font-black text-sm">{selectedIds.length}개 선택됨</p>
             <div className="flex gap-2">
-              <button onClick={() => handleBulkStatusUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px]">확인완료 처리</button>
-              <button onClick={() => handleBulkStatusUpdate('미확인')} className="bg-blue-400 text-white px-4 py-2 rounded-xl font-black text-[10px]">미확인 처리</button>
+              <button onClick={() => handleBulkStatusUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] hover:bg-blue-50">확인완료 처리</button>
+              <button onClick={() => handleBulkStatusUpdate('미확인')} className="bg-blue-400 text-white px-4 py-2 rounded-xl font-black text-[10px] hover:bg-blue-500">미확인 처리</button>
             </div>
           </div>
         )}
@@ -286,7 +276,6 @@ export default function PalletsPage() {
             </tbody>
           </table>
         </div>
-
         <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
           <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-all">PREV</button>
           <div className="flex gap-1">
@@ -298,7 +287,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 📥 엑셀 기간 선택 모달 (새로 추가됨) */}
+      {/* 📥 엑셀 기간 선택 모달 */}
       {showExcelModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
           <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
@@ -322,7 +311,7 @@ export default function PalletsPage() {
         </div>
       )}
 
-      {/* 모달 (신규/수정) */}
+      {/* 🟢 신규/수정 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-200">
