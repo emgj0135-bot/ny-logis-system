@@ -7,10 +7,18 @@ export default function AccidentPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  // 리스트 필터 및 페이지네이션 상태 (통일감 유지)
+  // 리스트 필터 및 페이지네이션 상태
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // 검색 필터 전용 상태
+  const [searchFilters, setSearchFilters] = useState({
+    startDate: '',
+    endDate: '',
+    searchText: '',
+    status: ''
+  });
 
   const [formData, setFormData] = useState({
     out_date: '', invoice_no: '', receiver_name: '', reason: '분실',
@@ -19,24 +27,71 @@ export default function AccidentPage() {
 
   const fetchAccidents = async () => {
     const { data } = await supabase.from('accidents').select('*').order('created_at', { ascending: false });
-    setList(data || []);
-    setFilteredList(data || []); // 초기엔 전체 리스트
+    const result = data || [];
+    setList(result);
+    setFilteredList(result); // 초기 로드 시 전체 표시
   };
 
   useEffect(() => { fetchAccidents(); }, []);
 
+  // 🔍 실제 검색 기능 구현
+  const handleSearch = () => {
+    let temp = [...list];
+
+    // 1. 날짜 필터 (출고일 기준)
+    if (searchFilters.startDate) {
+      temp = temp.filter(item => item.out_date >= searchFilters.startDate);
+    }
+    if (searchFilters.endDate) {
+      temp = temp.filter(item => item.out_date <= searchFilters.endDate);
+    }
+
+    // 2. 텍스트 검색 (송장번호 또는 수령인)
+    if (searchFilters.searchText) {
+      const txt = searchFilters.searchText.toLowerCase();
+      temp = temp.filter(item => 
+        item.invoice_no.toLowerCase().includes(txt) || 
+        item.receiver_name.toLowerCase().includes(txt)
+      );
+    }
+
+    // 3. 상태 필터
+    if (searchFilters.status) {
+      temp = temp.filter(item => item.status === searchFilters.status);
+    }
+
+    setFilteredList(temp);
+    setCurrentPage(1); // 검색 시 첫 페이지로 이동
+  };
+
+  // 필터 초기화
+  const resetFilters = () => {
+    setSearchFilters({ startDate: '', endDate: '', searchText: '', status: '' });
+    setFilteredList(list);
+    setCurrentPage(1);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await (editingItem 
+    const isEdit = !!editingItem;
+    
+    const { error } = await (isEdit
       ? supabase.from('accidents').update(formData).eq('id', editingItem.id)
       : supabase.from('accidents').insert([formData]));
-    if (error) alert("저장 실패: " + error.message);
-    else { closeModal(); fetchAccidents(); }
+
+    if (error) {
+      alert("⚠️ 저장 실패: " + error.message);
+    } else {
+      // ✨ 갱미가 요청한 작업 완료 팝업
+      alert(isEdit ? "✅ 수정이 완료되었습니다!" : "🚀 신규 사고 접수가 완료되었습니다!");
+      closeModal();
+      fetchAccidents();
+    }
   };
 
   const openModal = (item: any = null) => {
     if (item) { setEditingItem(item); setFormData({ ...item }); }
-    else { setEditingItem(null); setFormData({ out_date: '', invoice_no: '', receiver_name: '', reason: '분실', cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: '' }); }
+    else { setEditingItem(null); setFormData({ out_date: new Date().toISOString().split('T')[0], invoice_no: '', receiver_name: '', reason: '분실', cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: '' }); }
     setIsModalOpen(true);
   };
 
@@ -51,7 +106,7 @@ export default function AccidentPage() {
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
-      {/* 🔵 헤더 섹션 (용차 배차와 통일) */}
+      {/* 🔵 헤더 섹션 */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-red-600 rounded-full shadow-lg shadow-red-100"></div> 
@@ -73,30 +128,37 @@ export default function AccidentPage() {
         </button>
       </div>
 
-      {/* 🔍 검색 필터 (디자인 통일) */}
+      {/* 🔍 검색 필터 (작동 기능 추가) */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Outbound Date</p>
             <div className="flex items-center gap-3 font-bold">
-              <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs" />
+              <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs" 
+                value={searchFilters.startDate} onChange={e => setSearchFilters({...searchFilters, startDate: e.target.value})} />
               <span className="text-slate-300">~</span>
-              <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs" />
+              <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs" 
+                value={searchFilters.endDate} onChange={e => setSearchFilters({...searchFilters, endDate: e.target.value})} />
             </div>
           </div>
           <div className="space-y-3">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Search Info</p>
-            <input type="text" placeholder="송장번호 또는 수령인" className="p-3 bg-slate-50 rounded-xl outline-none text-xs w-64" />
+            <input type="text" placeholder="송장번호 또는 수령인" className="p-3 bg-slate-50 rounded-xl outline-none text-xs w-64" 
+              value={searchFilters.searchText} onChange={e => setSearchFilters({...searchFilters, searchText: e.target.value})}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()} // 엔터키 검색 지원
+            />
           </div>
         </div>
         <div className="flex gap-3 pt-4 border-t border-slate-50">
-          <select className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[150px] outline-none">
+          <select className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[150px] outline-none"
+            value={searchFilters.status} onChange={e => setSearchFilters({...searchFilters, status: e.target.value})}>
             <option value="">상태 전체</option>
             <option value="접수완료">접수완료</option>
             <option value="보상승인">보상승인</option>
+            <option value="정상출고(취소)">정상출고(취소)</option>
           </select>
-          <button className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
-          <button className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100">RESET</button>
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
+          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100">RESET</button>
         </div>
       </div>
 
@@ -114,46 +176,48 @@ export default function AccidentPage() {
             </tr>
           </thead>
           <tbody>
-            {currentItems.map((item, index) => {
-              const displayNo = filteredList.length - (indexOfFirstItem + index);
-              return (
-                <tr key={item.id} onClick={() => openModal(item)} className="cursor-pointer hover:bg-slate-50 border-b transition-colors font-black">
-                  <td className="p-5 text-center text-red-600">{displayNo}</td>
-                  <td className="p-5 text-center text-slate-500 font-bold">{item.out_date}</td>
-                  <td className="p-5">
-                    <p className="text-slate-800 text-base tracking-tight">{item.invoice_no} <span className="text-slate-400 mx-2">|</span> {item.receiver_name}</p>
-                    <p className="text-[11px] text-red-400 mt-1 uppercase tracking-wider">🚨 {item.reason}</p>
-                  </td>
-                  <td className="p-5 text-center text-slate-900 text-lg">
-                    {item.confirmed_amount.toLocaleString()}원
-                  </td>
-                  <td className="p-5 text-center">
-                    <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '보상승인' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="p-5 text-center">
-                    <div className="flex gap-2 justify-center text-[10px]">
-                      <button className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg">수정</button>
-                      <button className="text-slate-300 hover:text-red-400 px-3 py-1.5 rounded-lg">삭제</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {currentItems.length > 0 ? (
+              currentItems.map((item, index) => {
+                const displayNo = filteredList.length - (indexOfFirstItem + index);
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50 border-b transition-colors font-black">
+                    <td className="p-5 text-center text-red-600">{displayNo}</td>
+                    <td className="p-5 text-center text-slate-500 font-bold">{item.out_date}</td>
+                    <td className="p-5" onClick={() => openModal(item)}>
+                      <p className="text-slate-800 text-base tracking-tight cursor-pointer hover:text-red-600">{item.invoice_no} <span className="text-slate-400 mx-2">|</span> {item.receiver_name}</p>
+                      <p className="text-[11px] text-red-400 mt-1 uppercase tracking-wider">🚨 {item.reason}</p>
+                    </td>
+                    <td className="p-5 text-center text-slate-900 text-lg">
+                      {item.confirmed_amount.toLocaleString()}원
+                    </td>
+                    <td className="p-5 text-center">
+                      <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '보상승인' ? 'bg-blue-50 text-blue-600 border border-blue-100' : item.status === '정상출고(취소)' ? 'bg-slate-100 text-slate-400' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="p-5 text-center">
+                      <div className="flex gap-2 justify-center text-[10px]">
+                        <button onClick={() => openModal(item)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg">수정</button>
+                        {/* 삭제 기능은 안전을 위해 생략하거나 나중에 추가 가능 */}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={6} className="p-20 text-center text-slate-300 font-bold">검색 결과가 없습니다. 🔍</td>
+              </tr>
+            )}
           </tbody>
         </table>
 
-        {/* 🔢 페이지네이션 (디자인 통일) */}
+        {/* 🔢 페이지네이션 */}
         <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
           <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">PREV</button>
           <div className="flex gap-1">
             {Array.from({ length: totalPages }, (_, i) => (
-              <button 
-                key={i+1} 
-                onClick={() => setCurrentPage(i+1)} 
-                className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-red-600 text-white shadow-lg shadow-red-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}
-              >
+              <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-red-600 text-white shadow-lg shadow-red-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}>
                 {i+1}
               </button>
             ))}
@@ -162,7 +226,7 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 🟢 사고 접수 모달 (슬라이드 인 디자인 적용 가능성 열어둠) */}
+      {/* 🟢 사고 접수 모달 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto animate-in slide-in-from-right duration-300 relative text-black">
@@ -172,6 +236,7 @@ export default function AccidentPage() {
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6 font-black">
+              {/* 입력 폼 필드는 동일 (디자인 최적화 유지) */}
               <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -208,20 +273,20 @@ export default function AccidentPage() {
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div className="space-y-1">
                   <p className="text-[10px] text-slate-400 ml-4 uppercase">Process Status</p>
-                  <select value={formData.status} className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm outline-none" onChange={e => setFormData({...formData, status: e.target.value})}>
+                  <select value={formData.status} className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm outline-none font-black" onChange={e => setFormData({...formData, status: e.target.value})}>
                     <option value="접수완료">접수완료</option>
                     <option value="정상출고(취소)">정상출고(취소)</option>
                     <option value="보상승인">보상승인</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Compensation Amount</p>
-                  <input type="number" placeholder="0" value={formData.confirmed_amount} className="w-full p-5 bg-white border-2 border-red-100 rounded-2xl text-sm outline-none text-right text-red-600" onChange={e => setFormData({...formData, confirmed_amount: parseInt(e.target.value) || 0})} />
+                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Amount</p>
+                  <input type="number" placeholder="0" value={formData.confirmed_amount} className="w-full p-5 bg-white border-2 border-red-100 rounded-2xl text-sm outline-none text-right text-red-600 font-black" onChange={e => setFormData({...formData, confirmed_amount: parseInt(e.target.value) || 0})} />
                 </div>
               </div>
 
               <button type="submit" className="w-full mt-10 p-6 bg-red-600 text-white rounded-[2.5rem] text-xl shadow-xl shadow-red-100 hover:bg-red-700 transition-all uppercase tracking-widest">
-                {editingItem ? '사고 정보 수정 완료 💾' : '사고 데이터 저장 🚀'}
+                {editingItem ? '수정 완료 💾' : '데이터 저장 🚀'}
               </button>
             </form>
           </div>
