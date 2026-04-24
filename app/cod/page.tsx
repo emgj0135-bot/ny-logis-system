@@ -12,8 +12,8 @@ export default function CodPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // 검색 필터 상태
-  const [searchFilters, setSearchFilters] = useState({
+  // 검색 필터 상태 (입력용)
+  const [searchInputs, setSearchInputs] = useState({
     searchText: '',
     status: '',
     payType: ''
@@ -38,25 +38,32 @@ export default function CodPage() {
 
   useEffect(() => { fetchCod(); }, []);
 
-  // 🔍 실시간 필터링 기능
-  useEffect(() => {
+  // 🔍 ✨ 검색 버튼 클릭 시 실행될 필터링 함수
+  const handleSearch = () => {
     let temp = [...list];
-    if (searchFilters.searchText) {
-      const txt = searchFilters.searchText.toLowerCase();
+    if (searchInputs.searchText) {
+      const txt = searchInputs.searchText.toLowerCase();
       temp = temp.filter(item => 
         item.customer_name.toLowerCase().includes(txt) || 
         item.return_invoice.toLowerCase().includes(txt)
       );
     }
-    if (searchFilters.status) {
-      temp = temp.filter(item => item.status === searchFilters.status);
+    if (searchInputs.status) {
+      temp = temp.filter(item => item.status === searchInputs.status);
     }
-    if (searchFilters.payType) {
-      temp = temp.filter(item => item.pay_type === searchFilters.payType);
+    if (searchInputs.payType) {
+      temp = temp.filter(item => item.pay_type === searchInputs.payType);
     }
     setFilteredList(temp);
     setCurrentPage(1);
-  }, [searchFilters, list]);
+  };
+
+  // 필터 초기화
+  const resetFilters = () => {
+    setSearchInputs({ searchText: '', status: '', payType: '' });
+    setFilteredList(list);
+    setCurrentPage(1);
+  };
 
   const toggleConfirm = async (id: number, currentConfirmed: boolean) => {
     const newStatus = currentConfirmed ? '미확인' : '확인됨';
@@ -84,9 +91,21 @@ export default function CodPage() {
     if (error) {
       alert("실패: " + error.message);
     } else { 
-      alert(isEdit ? "✅ 정산 정보가 수정되었습니다!" : "🚀 신규 착불 데이터가 등록되었습니다!");
+      alert(isEdit ? "✅ 정산 정보 수정 완료!" : "🚀 신규 착불 데이터 등록 완료!");
       closeModal(); 
       fetchCod(); 
+    }
+  };
+
+  // 🗑️ ✨ 삭제 기능 추가
+  const handleDelete = async (id: number) => {
+    if (!confirm("정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    const { error } = await supabase.from('cod_manage').delete().eq('id', id);
+    if (!error) {
+      alert("삭제되었습니다.");
+      fetchCod();
+    } else {
+      alert("삭제 실패: " + error.message);
     }
   };
 
@@ -106,7 +125,6 @@ export default function CodPage() {
 
   const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
 
-  // 페이지네이션 계산
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
@@ -137,7 +155,7 @@ export default function CodPage() {
         </button>
       </div>
 
-      {/* 🔍 검색 필터 */}
+      {/* 🔍 검색 필터 (수정됨) */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -146,16 +164,17 @@ export default function CodPage() {
               type="text" 
               placeholder="업체명 또는 반송장번호" 
               className="p-3 bg-slate-50 rounded-xl outline-none text-xs w-80 font-bold"
-              value={searchFilters.searchText}
-              onChange={e => setSearchFilters({...searchFilters, searchText: e.target.value})}
+              value={searchInputs.searchText}
+              onChange={e => setSearchInputs({...searchInputs, searchText: e.target.value})}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()} // 엔터키로도 검색 가능
             />
           </div>
           <div className="space-y-3">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Payment Type</p>
             <select 
               className="p-3 bg-slate-50 rounded-xl outline-none text-xs font-bold min-w-[150px]"
-              value={searchFilters.payType}
-              onChange={e => setSearchFilters({...searchFilters, payType: e.target.value})}
+              value={searchInputs.payType}
+              onChange={e => setSearchInputs({...searchInputs, payType: e.target.value})}
             >
               <option value="">구분 전체</option>
               <option value="정산입금">정산입금</option>
@@ -166,15 +185,22 @@ export default function CodPage() {
         <div className="flex gap-3 pt-4 border-t border-slate-50">
           <select 
             className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[150px] outline-none"
-            value={searchFilters.status}
-            onChange={e => setSearchFilters({...searchFilters, status: e.target.value})}
+            value={searchInputs.status}
+            onChange={e => setSearchInputs({...searchInputs, status: e.target.value})}
           >
             <option value="">상태 전체</option>
             <option value="미확인">미확인</option>
             <option value="확인됨">확인됨</option>
           </select>
+          {/* ✨ 검색 버튼 추가 */}
           <button 
-            onClick={() => setSearchFilters({searchText: '', status: '', payType: ''})}
+            onClick={handleSearch}
+            className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all"
+          >
+            SEARCH FILTER 🔍
+          </button>
+          <button 
+            onClick={resetFilters}
             className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100 hover:bg-slate-100 transition-all"
           >
             RESET
@@ -188,10 +214,10 @@ export default function CodPage() {
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest">
             <tr>
               <th className="p-5 text-center w-24">상태</th>
-              <th className="p-5 text-center w-24">구분</th>
+              <th className="p-5 text-center w-32">구분</th> {/* ✨ 너비 조정 */}
               <th className="p-5 text-left">업체 / 반송장 정보</th>
               <th className="p-5 text-center w-32">운임비</th>
-              <th className="p-5 text-center w-32">관리</th>
+              <th className="p-5 text-center w-40">관리</th> {/* ✨ 관리탭 너비 조정 */}
             </tr>
           </thead>
           <tbody>
@@ -203,7 +229,7 @@ export default function CodPage() {
                       onClick={() => toggleConfirm(item.id, item.status === '확인됨')}
                       className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${
                         item.status === '확인됨' 
-                        ? 'bg-slate-100 text-slate-400' 
+                        ? 'bg-slate-100 text-slate-400 font-bold' 
                         : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'
                       }`}
                     >
@@ -211,7 +237,8 @@ export default function CodPage() {
                     </button>
                   </td>
                   <td className="p-5 text-center text-[10px]">
-                    <span className={`px-3 py-1 rounded-lg ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                    {/* ✨ 구분 디자인 한 줄로 깔끔하게 수정 */}
+                    <span className={`inline-block px-3 py-1 rounded-lg whitespace-nowrap ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'}`}>
                       {item.pay_type}
                     </span>
                   </td>
@@ -225,46 +252,44 @@ export default function CodPage() {
                     <p className="text-blue-600 text-lg">{item.fee.toLocaleString()}원</p>
                   </td>
                   <td className="p-5 text-center">
-                    <button onClick={() => openModal(item)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-[10px]">수정</button>
+                    {/* ✨ 수정/삭제 버튼 배치 수정 */}
+                    <div className="flex gap-4 justify-center text-[10px] text-slate-300">
+                      <button onClick={() => openModal(item)} className="hover:text-blue-600 font-bold">수정</button>
+                      <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 font-bold">삭제</button>
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="p-20 text-center text-slate-300 font-bold italic">검색 결과가 없습니다. 🔍</td>
+                <td colSpan={5} className="p-20 text-center text-slate-300 font-bold italic text-lg">검색 결과가 없습니다. 🔍</td>
               </tr>
             )}
           </tbody>
         </table>
 
-        {/* 🔢 페이지네이션 */}
+        {/* 🔢 페이지네이션 (기존 동일) */}
         <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
           <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">PREV</button>
           <div className="flex gap-1">
             {Array.from({ length: totalPages }, (_, i) => (
-              <button 
-                key={i+1} 
-                onClick={() => setCurrentPage(i+1)} 
-                className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}
-              >
-                {i+1}
-              </button>
+              <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
             ))}
           </div>
           <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">NEXT</button>
         </div>
       </div>
 
-      {/* 📋 슬라이드 모달 */}
+      {/* 📋 슬라이드 모달 (기존 동일) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden">
+        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden font-black">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto animate-in slide-in-from-right duration-300 relative text-black">
             <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black">✕</button>
             <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter">
               착불 <span className="text-blue-600">데이터 기록</span>
             </h2>
             
-            <form onSubmit={handleSubmit} className="space-y-6 font-black">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4">
                 <p className="text-[10px] text-slate-400 ml-4 uppercase">Payment Type</p>
                 <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm">
