@@ -53,8 +53,8 @@ export default function MainPage() {
       {/* 🔵 상단 헤더 섹션 */}
       <div className="mb-10 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black italic text-slate-800 tracking-tighter uppercase leading-none">
-            NY LOGIS <span className="text-orange-500">대시보드</span>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
+            NY LOGIS <span className="text-blue-600">대시보드</span>
           </h1>
           <p className="text-sm font-bold text-slate-400 mt-2 uppercase tracking-tight">
             천안센터 실시간 업무 현황판 (Partner Mode)
