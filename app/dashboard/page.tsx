@@ -19,8 +19,8 @@ export default function DashboardPage() {
 
   const fetchCounts = async () => {
     try {
-      // 💡 테이블명 확인: 갱미의 DB 테이블명에 맞춰서 pallets -> pallet 등으로 수정 필요할 수 있음
-      const { count: pCount } = await supabase.from('pallet').select('*', { count: 'exact', head: true }).eq('status', '미확인');
+      // 💡 테이블 이름이 DB와 정확히 일치하는지 확인해 (pallets vs pallet)
+      const { count: pCount } = await supabase.from('pallets').select('*', { count: 'exact', head: true }).eq('status', '미확인');
       const { count: tCount } = await supabase.from('truck_orders').select('*', { count: 'exact', head: true }).eq('status', '신청완료');
       const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '접수완료');
       const { count: payCount } = await supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', '미확인');
@@ -41,43 +41,47 @@ export default function DashboardPage() {
       <div className="mb-10 flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black italic text-slate-800 tracking-tighter uppercase">NY LOGIS 대시보드</h1>
-          <p className="text-sm font-bold text-slate-400 mt-1">천안센터 파트너용 실시간 현황판입니다.</p>
+          <p className="text-sm font-bold text-slate-400 mt-1 uppercase">Cheonan Center Real-time Status</p>
         </div>
-        <button onClick={fetchCounts} className="text-xs font-black text-slate-400 bg-white px-4 py-2 rounded-xl shadow-sm hover:text-slate-800 transition-all">🔄 새로고침</button>
+        <button 
+          onClick={fetchCounts} 
+          className="text-xs font-black text-slate-400 bg-white px-4 py-2 rounded-xl shadow-sm hover:text-slate-800 transition-all border border-slate-100"
+        >
+          🔄 REFRESH
+        </button>
       </div>
 
-      {/* 상단 실시간 카운트 카드 */}
+      {/* 상단 실시간 카운트 카드 섹션 */}
       <div className="grid grid-cols-4 gap-6 mb-12">
-        {/* 파렛트 */}
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">파렛트 미확인</p>
+          <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest font-sans">파렛트 미확인 전표</p>
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-black text-slate-800">{counts.pallets}</span>
             <span className="text-sm font-bold text-slate-400 font-sans">개</span>
           </div>
           <div className="absolute top-0 right-0 w-2 h-full bg-slate-100 group-hover:bg-blue-500 transition-all"></div>
         </div>
-        {/* 용차 */}
+
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-orange-400 mb-2 uppercase tracking-widest">용차 신청완료</p>
+          <p className="text-[10px] font-black text-orange-400 mb-2 uppercase tracking-widest font-sans">용차 배차 신청완료</p>
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-black text-slate-800">{counts.trucks}</span>
             <span className="text-sm font-bold text-slate-400 font-sans">건</span>
           </div>
           <div className="absolute top-0 right-0 w-2 h-full bg-slate-100 group-hover:bg-orange-500 transition-all"></div>
         </div>
-        {/* 사고 */}
+
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-red-400 mb-2 uppercase tracking-widest">미처리 사고</p>
+          <p className="text-[10px] font-black text-red-400 mb-2 uppercase tracking-widest font-sans">미처리 사고접수</p>
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-black text-slate-800">{counts.accidents}</span>
             <span className="text-sm font-bold text-slate-400 font-sans">건</span>
           </div>
           <div className="absolute top-0 right-0 w-2 h-full bg-slate-100 group-hover:bg-red-500 transition-all"></div>
         </div>
-        {/* 착불 */}
+
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-blue-400 mb-2 uppercase tracking-widest">미확인 착불</p>
+          <p className="text-[10px] font-black text-blue-400 mb-2 uppercase tracking-widest font-sans">미확인 착불관리</p>
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-black text-slate-800">{counts.payments}</span>
             <span className="text-sm font-bold text-slate-400 font-sans">건</span>
@@ -86,33 +90,33 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 하단 메뉴 카드 - ✨ Link href 경로 수정 완료 */}
-      <div className="grid grid-cols-2 gap-8">
+      {/* ✨ 하단 카드 섹션 - 주소 수정 완료 (s 제거 등 사이드바와 통일) */}
+      <div className="grid grid-cols-2 gap-8 text-left">
         <Link href="/truck" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-orange-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">🚚</div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2 text-left">용차 배차</h2>
-          <p className="text-slate-400 font-bold text-sm text-left font-sans">배차 진행 상황 확인 및 기사 정보를 등록하세요.</p>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">용차 배차관리</h2>
+          <p className="text-slate-400 font-bold text-sm font-sans">현재 배차 진행 상황을 확인하고 기사 정보를 등록합니다.</p>
         </Link>
 
-        {/* 💡 /accidents -> /accident 로 수정 */}
+        {/* 💡 /accidents 에서 /accident 로 수정 (폴더명 확인 필수!) */}
         <Link href="/accident" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-red-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">⚠️</div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2 text-left">사고 접수</h2>
-          <p className="text-slate-400 font-bold text-sm text-left font-sans">사고 내역 확인 및 처리 상태를 실시간 관리합니다.</p>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">사고 접수센터</h2>
+          <p className="text-slate-400 font-bold text-sm font-sans">최근 발생한 사고 내역을 확인하고 처리 상태를 관리합니다.</p>
         </Link>
 
-        {/* 💡 /pallets -> /pallet 으로 수정 */}
+        {/* 💡 /pallets 에서 /pallet 으로 수정 */}
         <Link href="/pallet" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-slate-100 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">📦</div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2 text-left">파렛트 전표관리</h2>
-          <p className="text-slate-400 font-bold text-sm text-left font-sans">천안센터 내 전체 파렛트 입출고 데이터를 제어합니다.</p>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">파렛트 전표관리</h2>
+          <p className="text-slate-400 font-bold text-sm font-sans">천안센터 내 전체 파렛트 입출고 데이터를 제어합니다.</p>
         </Link>
 
-        {/* 💡 /payments -> /cod 로 수정 (사이드바와 통일) */}
+        {/* 💡 /payments 에서 /cod 로 수정 (사이드바 메뉴와 통일) */}
         <Link href="/cod" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-blue-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">💰</div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2 text-left">착불 입고</h2>
-          <p className="text-slate-400 font-bold text-sm text-left font-sans">미수금 정산 및 업체별 입금 내역을 확인합니다.</p>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">착불 정산관리</h2>
+          <p className="text-slate-400 font-bold text-sm font-sans">미수금 정산 및 업체별 입금 내역을 최종 확인합니다.</p>
         </Link>
       </div>
     </div>
