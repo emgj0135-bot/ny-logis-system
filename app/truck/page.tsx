@@ -207,7 +207,7 @@ export default function TruckPage() {
         <div className="flex flex-wrap gap-10">
           {/* ✨ 작성일자 필터 추가 */}
           <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">작성일자</p>
             <div className="flex items-center gap-3">
               <input type="date" className="p-3 bg-slate-50 rounded-xl text-xs font-bold outline-none shadow-inner" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
               <span className="text-slate-300">~</span>
@@ -215,7 +215,7 @@ export default function TruckPage() {
             </div>
           </div>
           <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Loading Date</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">상차일자</p>
             <div className="flex items-center gap-3">
               <input type="date" className="p-3 bg-slate-50 rounded-xl text-xs font-bold outline-none shadow-inner" value={filters.loading_start} onChange={e => setFilters({...filters, loading_start: e.target.value})} />
               <span className="text-slate-300">~</span>
@@ -232,8 +232,8 @@ export default function TruckPage() {
           </div>
         </div>
         <div className="flex gap-3 pt-4 border-t border-slate-50">
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH FILTER 🔍</button>
-          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100">RESET</button>
+          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">검색 🔍</button>
+          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100">리</button>
         </div>
       </div>
 
@@ -395,7 +395,7 @@ export default function TruckPage() {
               <section className="space-y-4 p-8 bg-blue-50/50 rounded-[2.5rem] border border-blue-100 shadow-inner">
                 <div className="flex items-center gap-2 ml-2">
                   <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-                  <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black italic">Unloading Point 1</p>
+                  <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black italic">하차지 1</p>
                 </div>
                 <select onChange={e => autoFillUnloading(e.target.value, 1)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none font-black text-black">
                   <option value="">하차지 즐겨찾기</option>
@@ -409,7 +409,7 @@ export default function TruckPage() {
               <section className="space-y-4 p-8 bg-slate-100/50 rounded-[2.5rem] border border-slate-200 shadow-inner">
                 <div className="flex items-center gap-2 ml-2">
                   <div className="w-1.5 h-4 bg-slate-400 rounded-full"></div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black italic">Unloading Point 2 (Optional)</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black italic">하차지2</p>
                 </div>
                 <select onChange={e => autoFillUnloading(e.target.value, 2)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none font-black text-black">
                   <option value="">하차지 즐겨찾기</option>
