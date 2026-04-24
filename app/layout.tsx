@@ -1,14 +1,13 @@
 "use client";
 import './globals.css';
 import Link from 'next/link';
-import { createClient } from "@supabase/supabase-js";
+// ❌ 기존 직접 생성 방식 삭제
+// import { createClient } from "@supabase/supabase-js"; 
+import { supabase } from '@/lib/supabase'; // ✨ lib 폴더에 있는 supabase를 불러와! (경로 확인 필수)
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// ❌ 여기 있던 supabase 생성 코드(createClient)를 통째로 삭제했어!
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,8 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const getRole = async () => {
+      // ✨ 이제 위에서 import한 단일 supabase 객체를 사용해!
       const { data: { user } } = await supabase.auth.getUser();
-      // 💡 여기서 role을 가져오긴 하지만, 아래 메뉴 출력에서는 조건문을 제거했어!
       setRole(user?.user_metadata?.role || 'user');
       setLoading(false);
     };
@@ -51,7 +50,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-2 mb-2">메뉴 시스템</p>
             
-            {/* ✨ 모든 유저에게 공개된 메뉴 섹션 */}
             <Link href="/" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
               <span className="text-xl group-hover:scale-110">🏠</span> <span>대시보드</span>
             </Link>
