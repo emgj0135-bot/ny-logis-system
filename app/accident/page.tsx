@@ -15,10 +15,9 @@ export default function AccidentPage() {
 
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
-  // ✨ 검색 필터 (작성일자 created_start/end 추가)
   const [filters, setFilters] = useState({
-    created_start: "", created_end: "", // ✨ 작성일자 필터
-    out_start: "", out_end: "",         // ✨ 출고일자 필터
+    created_start: "", created_end: "",
+    out_start: "", out_end: "",
     status: "",
     search: ""
   });
@@ -44,7 +43,6 @@ export default function AccidentPage() {
     setFilteredList(data || []);
   };
 
-  // ✨ 검색 필터 로직
   const handleSearch = () => {
     let result = [...list];
     if (filters.created_start) result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
@@ -132,10 +130,9 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (작성일자 & 출고일자 분리) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10 font-black">
-          {/* ✨ 작성일자 필터 */}
           <div className="space-y-3">
             <p className="text-[10px] text-slate-400 uppercase ml-2 tracking-widest italic">Created Date (작성일)</p>
             <div className="flex items-center gap-3 font-bold">
@@ -144,7 +141,6 @@ export default function AccidentPage() {
               <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs shadow-inner" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
             </div>
           </div>
-          {/* ✨ 출고일자 필터 */}
           <div className="space-y-3">
             <p className="text-[10px] text-slate-400 uppercase ml-2 tracking-widest italic">Outbound Date (출고일)</p>
             <div className="flex items-center gap-3 font-bold">
@@ -169,17 +165,17 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 📋 메인 테이블 (컬럼 재배치) */}
+      {/* 📋 메인 테이블 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-black font-black">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
               <th className="p-5 w-16">No</th>
-              <th className="p-5 w-32 italic">Created (작성)</th> {/* ✨ 작성일자 위치 */}
+              <th className="p-5 w-32 italic">Created (작성)</th>
               <th className="p-5 text-left">사고 내용 (송장 / 수령인)</th>
-              <th className="p-5 w-32 italic">Outbound (출고)</th> {/* ✨ 출고일자 위치 */}
+              <th className="p-5 w-32 italic">Outbound (출고)</th>
               <th className="p-5 w-32">변상 금액</th>
-              <th className="p-5 w-24">상태</th>
+              <th className="p-5 w-32">상태</th> {/* ✨ 너비를 살짝 넓힘 (24 -> 32) */}
               <th className="p-5 w-32">관리</th>
             </tr>
           </thead>
@@ -189,15 +185,16 @@ export default function AccidentPage() {
               return (
                 <tr key={item.id} onClick={() => openModal(item)} className="cursor-pointer hover:bg-slate-50 border-b transition-colors text-center font-black">
                   <td className="p-5 text-red-600">{displayNo}</td>
-                  <td className="p-5 text-slate-400 text-xs">{item.created_at.split('T')[0]}</td> {/* ✨ 작성일자 */}
+                  <td className="p-5 text-slate-400 text-xs">{item.created_at.split('T')[0]}</td>
                   <td className="p-5 text-left">
                     <p className="text-slate-800 text-base tracking-tight font-black">{item.invoice_no} <span className="text-slate-200 mx-2 font-normal">|</span> {item.receiver_name}</p>
                     <p className="text-[11px] text-red-400 mt-1 uppercase font-black">🚨 {item.reason}</p>
                   </td>
-                  <td className="p-5 text-slate-800 font-black">{item.out_date}</td> {/* ✨ 출고일자 */}
+                  <td className="p-5 text-slate-800 font-black">{item.out_date}</td>
                   <td className="p-5 text-red-600 text-lg font-black">{item.confirmed_amount.toLocaleString()}원</td>
                   <td className="p-5">
-                    <span className={`text-[10px] px-4 py-1.5 rounded-full font-black ${item.status === '보상승인' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>
+                    {/* ✨ whitespace-nowrap 적용하여 일자로 출력 */}
+                    <span className={`text-[10px] px-4 py-1.5 rounded-full font-black inline-block whitespace-nowrap ${item.status === '보상승인' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>
                       {item.status}
                     </span>
                   </td>
@@ -212,7 +209,8 @@ export default function AccidentPage() {
             })}
           </tbody>
         </table>
-        {/* 페이지네이션 생략 (기존과 동일) */}
+
+        {/* 페이지네이션 */}
         <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50">
           <button onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => Math.max(prev - 1, 1)); }} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs">PREV</button>
           <div className="flex gap-1">
@@ -224,10 +222,10 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 📥 엑셀 모달 (기존 동일) */}
+      {/* 📥 엑셀 모달 */}
       {showExcelModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200 text-black">
             <h2 className="text-lg font-black mb-2 text-slate-800 tracking-tight uppercase">Excel Download</h2>
             <p className="text-slate-400 text-[10px] font-bold mb-6 italic text-red-500">출고일자(Outbound) 기준으로 추출됩니다.</p>
             <div className="space-y-4">
@@ -242,31 +240,31 @@ export default function AccidentPage() {
         </div>
       )}
 
-      {/* 🟢 사고 접수 모달 (레전드 디자인 유지) */}
+      {/* 🟢 사고 접수 모달 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden font-black">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto animate-in slide-in-from-right duration-300 relative text-black font-black">
-            <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black font-black">✕</button>
+            <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black">✕</button>
             <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter">사고 <span className="text-red-600">데이터 기록</span></h2>
             <form onSubmit={handleSubmit} className="space-y-6 font-black text-black">
-              <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4">
+              <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4 font-black">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-[10px] text-slate-400 ml-4 uppercase">Outbound Date</p>
                     <input required type="date" value={formData.out_date} className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, out_date: e.target.value})} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] text-slate-400 ml-4 uppercase">Invoice No</p>
+                    <p className="text-[10px] text-slate-400 ml-4 uppercase font-black">Invoice No</p>
                     <input required type="text" placeholder="송장번호" value={formData.invoice_no} className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, invoice_no: e.target.value})} />
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1 font-black text-black">
                   <p className="text-[10px] text-slate-400 ml-4 uppercase">Receiver</p>
                   <input required type="text" placeholder="수령인" value={formData.receiver_name} className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner outline-none font-black text-black" onChange={e => setFormData({...formData, receiver_name: e.target.value})} />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 font-black text-black">
                   <p className="text-[10px] text-slate-400 ml-4 uppercase">Reason</p>
                   <select value={formData.reason} className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner outline-none text-red-600 font-black" onChange={e => setFormData({...formData, reason: e.target.value})}>
                     <option value="분실">🚨 분실</option>
@@ -275,11 +273,11 @@ export default function AccidentPage() {
                   </select>
                 </div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 font-black text-black">
                 <p className="text-[10px] text-slate-400 ml-4 uppercase font-black">CJ KakaoTalk Answer</p>
                 <textarea placeholder="단톡방 답변 기록" value={formData.cj_answer} className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner h-32 outline-none font-black text-black" onChange={e => setFormData({...formData, cj_answer: e.target.value})} />
               </div>
-              <div className="grid grid-cols-2 gap-4 items-end">
+              <div className="grid grid-cols-2 gap-4 items-end font-black text-black">
                 <div className="space-y-1">
                   <p className="text-[10px] text-slate-400 ml-4 uppercase">Status</p>
                   <select value={formData.status} className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm outline-none font-black text-black" onChange={e => setFormData({...formData, status: e.target.value})}>
