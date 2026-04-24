@@ -75,8 +75,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             
             <Link href="/staff" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-green-600 transition-all group">
-              <span className="text-xl group-hover:scale-110">👥</span> <span>상차 담당자 관리</span>
-            </Link>
+  <span className="text-xl group-hover:scale-110">👥</span> 
+  {/* ✨ whitespace-nowrap 추가해서 절대 안 꺾이게 하고, text-sm으로 크기를 살짝 조절 */}
+  <span className="whitespace-nowrap text-sm tracking-tighter">상차 담당자 관리</span>
+</Link>
           </div>
 
           <div className="mt-auto space-y-4">
