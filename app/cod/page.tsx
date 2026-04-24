@@ -7,6 +7,18 @@ export default function CodPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
+  // 리스트 필터 및 페이지네이션 상태
+  const [filteredList, setFilteredList] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // 검색 필터 상태
+  const [searchFilters, setSearchFilters] = useState({
+    searchText: '',
+    status: '',
+    payType: ''
+  });
+
   const [formData, setFormData] = useState({
     pay_type: '정산입금', customer_name: '', delivery_company: '',
     return_invoice: '', fee: 0, memo: '', status: '미확인'
@@ -18,20 +30,39 @@ export default function CodPage() {
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (!error) setList(data || []);
+    if (!error) {
+      setList(data || []);
+      setFilteredList(data || []);
+    }
   };
 
   useEffect(() => { fetchCod(); }, []);
 
+  // 🔍 실시간 필터링 기능
+  useEffect(() => {
+    let temp = [...list];
+    if (searchFilters.searchText) {
+      const txt = searchFilters.searchText.toLowerCase();
+      temp = temp.filter(item => 
+        item.customer_name.toLowerCase().includes(txt) || 
+        item.return_invoice.toLowerCase().includes(txt)
+      );
+    }
+    if (searchFilters.status) {
+      temp = temp.filter(item => item.status === searchFilters.status);
+    }
+    if (searchFilters.payType) {
+      temp = temp.filter(item => item.pay_type === searchFilters.payType);
+    }
+    setFilteredList(temp);
+    setCurrentPage(1);
+  }, [searchFilters, list]);
+
   const toggleConfirm = async (id: number, currentConfirmed: boolean) => {
     const newStatus = currentConfirmed ? '미확인' : '확인됨';
-    
     const { error } = await supabase
       .from('cod_manage')
-      .update({ 
-        is_confirmed: !currentConfirmed, 
-        status: newStatus 
-      })
+      .update({ is_confirmed: !currentConfirmed, status: newStatus })
       .eq('id', id);
 
     if (!error) {
@@ -43,15 +74,17 @@ export default function CodPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isEdit = !!editingItem;
     const submitData = { ...formData, status: formData.status || '미확인' };
 
-    const { error } = await (editingItem 
+    const { error } = await (isEdit
       ? supabase.from('cod_manage').update(submitData).eq('id', editingItem.id)
       : supabase.from('cod_manage').insert([submitData]));
 
     if (error) {
       alert("실패: " + error.message);
     } else { 
+      alert(isEdit ? "✅ 정산 정보가 수정되었습니다!" : "🚀 신규 착불 데이터가 등록되었습니다!");
       closeModal(); 
       fetchCod(); 
     }
@@ -73,109 +106,217 @@ export default function CodPage() {
 
   const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
 
+  // 페이지네이션 계산
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans">
+    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
       
-      {/* 🔵 블루 포인트 헤더 섹션 - 다른 탭들과 완벽 통일! */}
-      <div className="max-w-4xl mx-auto flex justify-between items-center mb-10">
+      {/* 🔵 헤더 섹션 */}
+      <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-4">
-          {/* 대시보드 아이덴티티: 블루 바 */}
-          <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
-          
+          <div className="w-2 h-10 bg-blue-600 rounded-full shadow-lg shadow-blue-100"></div> 
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
               착불 <span className="text-blue-600">관리</span>
             </h1>
-            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase">
-              천안센터 <span className="text-blue-600/60 font-black">착불 운임 및 정산 관리 시스템</span>
+            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase text-blue-600/60">
+              천안센터 착불 운임 및 정산 관리 시스템
             </p>
           </div>
         </div>
 
         <button 
           onClick={() => openModal()} 
-          className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all text-sm flex items-center gap-2"
+          className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all text-sm"
         >
-          <span className="text-xl">+</span> 착불 데이터 등록
+          + 신규 착불 데이터 등록
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 max-w-4xl mx-auto">
-        {list.map((item) => (
-          <div key={item.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex justify-between items-center group hover:border-blue-300 transition-all">
-            <div className="flex items-center gap-6">
-              <button 
-                onClick={() => toggleConfirm(item.id, item.status === '확인됨')} 
-                className={`w-16 py-8 rounded-2xl font-black text-[11px] transition-all ${
-                  item.status === '확인됨' 
-                  ? 'bg-slate-100 text-slate-400 border border-slate-100' 
-                  : 'bg-blue-600 text-white animate-pulse shadow-lg shadow-blue-100'
-                }`}
-              >
-                {item.status === '확인됨' ? '확인됨' : '미확인'}
-              </button>
-              
-              <div onClick={() => openModal(item)} className="cursor-pointer">
-                <p className={`text-[9px] font-black w-fit px-2 py-1 rounded mb-1.5 uppercase tracking-wider ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                  {item.pay_type}
-                </p>
-                <p className="font-black text-slate-800 text-lg tracking-tight">{item.customer_name}</p>
-                <p className="text-xs font-bold text-slate-400 mt-0.5">{item.delivery_company} | {item.return_invoice}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="font-black text-blue-600 text-2xl tracking-tighter">{item.fee.toLocaleString()}<span className="text-sm ml-0.5">원</span></p>
-              <p className="text-[10px] text-slate-300 font-bold mt-1 uppercase">COD Amount</p>
-            </div>
+      {/* 🔍 검색 필터 */}
+      <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
+        <div className="flex flex-wrap gap-10">
+          <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Search Information</p>
+            <input 
+              type="text" 
+              placeholder="업체명 또는 반송장번호" 
+              className="p-3 bg-slate-50 rounded-xl outline-none text-xs w-80 font-bold"
+              value={searchFilters.searchText}
+              onChange={e => setSearchFilters({...searchFilters, searchText: e.target.value})}
+            />
           </div>
-        ))}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Payment Type</p>
+            <select 
+              className="p-3 bg-slate-50 rounded-xl outline-none text-xs font-bold min-w-[150px]"
+              value={searchFilters.payType}
+              onChange={e => setSearchFilters({...searchFilters, payType: e.target.value})}
+            >
+              <option value="">구분 전체</option>
+              <option value="정산입금">정산입금</option>
+              <option value="업체입금">업체입금</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-3 pt-4 border-t border-slate-50">
+          <select 
+            className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[150px] outline-none"
+            value={searchFilters.status}
+            onChange={e => setSearchFilters({...searchFilters, status: e.target.value})}
+          >
+            <option value="">상태 전체</option>
+            <option value="미확인">미확인</option>
+            <option value="확인됨">확인됨</option>
+          </select>
+          <button 
+            onClick={() => setSearchFilters({searchText: '', status: '', payType: ''})}
+            className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100 hover:bg-slate-100 transition-all"
+          >
+            RESET
+          </button>
+        </div>
       </div>
 
-      {/* 모달 섹션 */}
+      {/* 📋 메인 테이블 */}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest">
+            <tr>
+              <th className="p-5 text-center w-24">상태</th>
+              <th className="p-5 text-center w-24">구분</th>
+              <th className="p-5 text-left">업체 / 반송장 정보</th>
+              <th className="p-5 text-center w-32">운임비</th>
+              <th className="p-5 text-center w-32">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentItems.length > 0 ? (
+              currentItems.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 border-b transition-colors font-black">
+                  <td className="p-5 text-center">
+                    <button 
+                      onClick={() => toggleConfirm(item.id, item.status === '확인됨')}
+                      className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${
+                        item.status === '확인됨' 
+                        ? 'bg-slate-100 text-slate-400' 
+                        : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'
+                      }`}
+                    >
+                      {item.status}
+                    </button>
+                  </td>
+                  <td className="p-5 text-center text-[10px]">
+                    <span className={`px-3 py-1 rounded-lg ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                      {item.pay_type}
+                    </span>
+                  </td>
+                  <td className="p-5" onClick={() => openModal(item)}>
+                    <p className="text-slate-800 text-base tracking-tight cursor-pointer hover:text-blue-600">{item.customer_name}</p>
+                    <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-mono font-normal">
+                      {item.delivery_company} | {item.return_invoice}
+                    </p>
+                  </td>
+                  <td className="p-5 text-center">
+                    <p className="text-blue-600 text-lg">{item.fee.toLocaleString()}원</p>
+                  </td>
+                  <td className="p-5 text-center">
+                    <button onClick={() => openModal(item)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-[10px]">수정</button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="p-20 text-center text-slate-300 font-bold italic">검색 결과가 없습니다. 🔍</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {/* 🔢 페이지네이션 */}
+        <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
+          <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">PREV</button>
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button 
+                key={i+1} 
+                onClick={() => setCurrentPage(i+1)} 
+                className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}
+              >
+                {i+1}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">NEXT</button>
+        </div>
+      </div>
+
+      {/* 📋 슬라이드 모달 */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[200]">
-          <div className="bg-white p-10 rounded-[48px] w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 font-black text-xl font-sans">✕</button>
-            <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">신규 <span className="text-blue-600">착불</span> 관리</h2>
-            <form onSubmit={handleSubmit} className="space-y-6 text-sm font-bold">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-400 ml-4 mb-1 uppercase tracking-widest">Type Selection</p>
-                <select value={formData.pay_type} className="w-full bg-slate-50 p-5 rounded-[24px] border-none outline-none font-black text-blue-600 shadow-inner appearance-none" onChange={e => setFormData({...formData, pay_type: e.target.value})}>
-                  <option value="정산입금">💳 정산입금 (선지불)</option>
-                  <option value="업체입금">💸 업체입금 (직접지불)</option>
-                </select>
+        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden">
+          <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto animate-in slide-in-from-right duration-300 relative text-black">
+            <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 hover:text-slate-600 text-2xl font-black">✕</button>
+            <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter">
+              착불 <span className="text-blue-600">데이터 기록</span>
+            </h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-6 font-black">
+              <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4">
+                <p className="text-[10px] text-slate-400 ml-4 uppercase">Payment Type</p>
+                <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm">
+                  {['정산입금', '업체입금'].map(t => (
+                    <button 
+                      key={t} 
+                      type="button"
+                      onClick={() => setFormData({...formData, pay_type: t})} 
+                      className={`flex-1 py-3 rounded-xl text-xs transition-all ${formData.pay_type === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 ml-4 uppercase">Customer</p>
-                  <input required type="text" placeholder="업체명" value={formData.customer_name} className="w-full bg-slate-50 p-5 rounded-2xl border-none shadow-inner" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
+                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Customer Name</p>
+                  <input required type="text" value={formData.customer_name} className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner outline-none" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 ml-4 uppercase">Carrier</p>
-                  <input required type="text" placeholder="택배사" value={formData.delivery_company} className="w-full bg-slate-50 p-5 rounded-2xl border-none shadow-inner" onChange={e => setFormData({...formData, delivery_company: e.target.value})} />
+                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Delivery Company</p>
+                  <input required type="text" value={formData.delivery_company} className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner outline-none" onChange={e => setFormData({...formData, delivery_company: e.target.value})} />
                 </div>
               </div>
-              
+
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400 ml-4 uppercase">Invoice Number</p>
-                <input required type="text" placeholder="반송장번호 입력" value={formData.return_invoice} className="w-full bg-slate-50 p-5 rounded-2xl border-none shadow-inner font-mono tracking-widest" onChange={e => setFormData({...formData, return_invoice: e.target.value})} />
+                <p className="text-[10px] text-slate-400 ml-4 uppercase">Return Invoice Number</p>
+                <input required type="text" value={formData.return_invoice} className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner outline-none font-mono tracking-widest" onChange={e => setFormData({...formData, return_invoice: e.target.value})} />
               </div>
-              
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-400 ml-4 mb-1 text-right uppercase">Settlement Amount (KRW)</p>
-                <input required type="number" placeholder="운임비" value={formData.fee} className="w-full bg-slate-50 p-6 rounded-2xl text-right font-black text-blue-600 text-3xl border-none shadow-inner" onChange={e => setFormData({...formData, fee: parseInt(e.target.value) || 0})} />
+
+              <div className="space-y-1">
+                <p className="text-[10px] text-slate-400 ml-4 mb-1 text-right uppercase">Settlement Amount (KRW)</p>
+                <input required type="number" value={formData.fee} className="w-full p-6 bg-slate-50 rounded-2xl text-right font-black text-blue-600 text-3xl border-none shadow-inner outline-none" onChange={e => setFormData({...formData, fee: parseInt(e.target.value) || 0})} />
               </div>
 
               {formData.pay_type === '업체입금' && (
-                <div className="p-8 bg-blue-50/50 rounded-[40px] border border-blue-100 space-y-3 text-xs animate-in slide-in-from-top-2">
-                  <p className="font-black text-blue-600 mb-2 uppercase tracking-widest italic">Official Account Info</p>
-                  <div className="bg-white p-4 rounded-2xl flex justify-between shadow-sm border border-blue-50"><span>CJ대한통운(농협)</span><span className="font-black text-slate-800 tracking-tight">174428-52-054702 [이재우]</span></div>
-                  <div className="bg-white p-4 rounded-2xl flex justify-between shadow-sm border border-blue-50"><span>한진택배(기업)</span><span className="font-black text-slate-800 tracking-tight">118-063027-01-017 [양현모]</span></div>
+                <div className="p-6 bg-blue-50/50 rounded-[2.5rem] border border-blue-100 space-y-3 text-[11px] animate-in zoom-in-95">
+                  <p className="font-black text-blue-600 uppercase tracking-widest italic mb-1">Official Account Info</p>
+                  <div className="bg-white p-4 rounded-xl flex justify-between shadow-sm border border-blue-50">
+                    <span className="text-slate-400">CJ대한통운(농협)</span>
+                    <span className="font-black text-slate-800 tracking-tight">174428-52-054702 [이재우]</span>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl flex justify-between shadow-sm border border-blue-50">
+                    <span className="text-slate-400">한진택배(기업)</span>
+                    <span className="font-black text-slate-800 tracking-tight">118-063027-01-017 [양현모]</span>
+                  </div>
                 </div>
               )}
-              
-              <button type="submit" className="w-full bg-slate-900 py-6 rounded-[2.5rem] font-black text-white shadow-xl hover:bg-black transition-all text-xl uppercase tracking-[0.2em] mt-4">
+
+              <button type="submit" className="w-full mt-6 p-6 bg-slate-900 text-white rounded-[2.5rem] text-xl font-black shadow-xl hover:bg-black transition-all uppercase tracking-widest">
                 Save Settlement 🚀
               </button>
             </form>
