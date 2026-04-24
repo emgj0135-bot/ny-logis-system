@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+// ❌ 삭제: import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase"; // ✨ lib 폴더의 단일 인스턴스 불러오기
 import Link from "next/link";
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+// ❌ 삭제: const supabase = createClient(...);
 
 export default function DashboardPage() {
   const [counts, setCounts] = useState({
@@ -19,11 +20,26 @@ export default function DashboardPage() {
 
   const fetchCounts = async () => {
     try {
-      // 💡 테이블 이름이 DB와 정확히 일치하는지 확인해 (pallets vs pallet)
-      const { count: pCount } = await supabase.from('pallets').select('*', { count: 'exact', head: true }).eq('status', '미확인');
-      const { count: tCount } = await supabase.from('truck_orders').select('*', { count: 'exact', head: true }).eq('status', '신청완료');
-      const { count: aCount } = await supabase.from('accidents').select('*', { count: 'exact', head: true }).eq('status', '접수완료');
-      const { count: payCount } = await supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', '미확인');
+      // 💡 테이블 이름(pallets, truck_orders 등)이 DB와 일치하는지 꼭 확인해!
+      const { count: pCount } = await supabase
+        .from('pallets')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', '미확인');
+
+      const { count: tCount } = await supabase
+        .from('truck_orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', '신청완료');
+
+      const { count: aCount } = await supabase
+        .from('accidents')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', '접수완료');
+
+      const { count: payCount } = await supabase
+        .from('payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', '미확인');
 
       setCounts({
         pallets: pCount || 0,
@@ -90,7 +106,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ✨ 하단 카드 섹션 - 주소 수정 완료 (s 제거 등 사이드바와 통일) */}
+      {/* 하단 메뉴 이동 카드 섹션 */}
       <div className="grid grid-cols-2 gap-8 text-left">
         <Link href="/truck" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-orange-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">🚚</div>
@@ -98,21 +114,18 @@ export default function DashboardPage() {
           <p className="text-slate-400 font-bold text-sm font-sans">현재 배차 진행 상황을 확인하고 기사 정보를 등록합니다.</p>
         </Link>
 
-        {/* 💡 /accidents 에서 /accident 로 수정 (폴더명 확인 필수!) */}
         <Link href="/accident" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-red-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">⚠️</div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">사고 접수센터</h2>
           <p className="text-slate-400 font-bold text-sm font-sans">최근 발생한 사고 내역을 확인하고 처리 상태를 관리합니다.</p>
         </Link>
 
-        {/* 💡 /pallets 에서 /pallet 으로 수정 */}
         <Link href="/pallet" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-slate-100 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">📦</div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">파렛트 전표관리</h2>
           <p className="text-slate-400 font-bold text-sm font-sans">천안센터 내 전체 파렛트 입출고 데이터를 제어합니다.</p>
         </Link>
 
-        {/* 💡 /payments 에서 /cod 로 수정 (사이드바 메뉴와 통일) */}
         <Link href="/cod" className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-xl hover:-translate-y-2 transition-all group font-black">
           <div className="bg-blue-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-all">💰</div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">착불 정산관리</h2>
