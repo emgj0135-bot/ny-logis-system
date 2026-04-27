@@ -298,7 +298,7 @@ export default function CodPage() {
                   <p className="text-[10px] text-slate-400 ml-4 mb-1 text-right uppercase tracking-widest">Amount (KRW)</p>
                   <input required type="number" placeholder="운임비" value={formData.fee} className="w-full p-6 bg-slate-50 rounded-2xl text-right font-black text-blue-600 text-3xl border-none shadow-inner" onChange={e => setFormData({...formData, fee: parseInt(e.target.value) || 0})} />
                 </div>
-                <button type="submit" className="w-full mt-6 p-6 bg-slate-900 text-white rounded-[2.5rem] text-xl font-black shadow-xl hover:bg-black transition-all uppercase tracking-widest">Save Settlement 🚀</button>
+                <button type="submit" className="w-full mt-6 p-6 bg-slate-900 text-white rounded-[2.5rem] text-xl font-black shadow-xl hover:bg-black transition-all uppercase tracking-widest">등록 완료 🚀</button>
              </form>
           </div>
         </div>
