@@ -243,7 +243,7 @@ export default function AccidentPage() {
                   <input type="number" value={formData.confirmed_amount} className="w-full p-5 bg-white border-2 border-red-100 rounded-2xl text-sm outline-none text-right text-red-600 font-black" onChange={e => setFormData({...formData, confirmed_amount: parseInt(e.target.value) || 0})} />
                 </div>
                 <button type="submit" className="w-full mt-10 p-6 bg-red-600 text-white rounded-[2.5rem] text-xl font-black shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest font-black">
-                  {editingItem ? 'Save Changes 💾' : 'Submit Record 🚀'}
+                  {editingItem ? '수정완료 💾' : '등록완료 🚀'}
                 </button>
               </form>
             </div>
