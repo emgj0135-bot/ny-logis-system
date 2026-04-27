@@ -11,7 +11,7 @@ export default function TruckPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  // ✨ 추가된 유저 권한 상태
+  // ✨ 유저 권한 상태 (초기값 null)
   const [userRole, setUserRole] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,17 +42,20 @@ export default function TruckPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
 
-  // ✨ 유저 권한 확인 로직 추가
+  // ✨ 권한 확인 및 데이터 호출 로직
   useEffect(() => { 
     const init = async () => {
-      // 세션에서 유저 메타데이터(role) 가져오기
+      // 1. 세션에서 유저 정보 가져오기
       const { data: { session } } = await supabase.auth.getSession();
-      const role = session?.user?.user_metadata?.role || "guest";
+      const user = session?.user;
+      
+      // 2. 메타데이터에서 role 추출 (여러 경로 대응)
+      const role = user?.user_metadata?.role || user?.app_metadata?.role || "guest";
       setUserRole(role);
       
-      // 콘솔 확인용 (브라우저 F12에서 확인 가능)
       console.log("🔥 현재 로그인한 유저의 역할:", role);
       
+      // 3. 데이터 가져오기
       fetchData(); 
     };
     init();
@@ -74,10 +77,12 @@ export default function TruckPage() {
     }
   };
 
+  // 🚀 배차 신청/수정 로직
   const handleOrderSubmit = async () => {
     if (!formData.loading_place || !formData.unloading_place) return alert("필수 정보를 입력해주세요.");
     const { order_responses, created_at, id, ...pureData } = formData as any;
     const submissionData = { ...pureData, order_type: orderType };
+
     if (selectedOrder) {
       const { error } = await supabase.from('truck_orders').update(submissionData).eq('id', selectedOrder.id);
       if (!error) { alert("수정 완료! ✨"); setShowOrderModal(false); await fetchData(); }
@@ -87,12 +92,14 @@ export default function TruckPage() {
     }
   };
 
+  // 🗑️ 삭제 로직
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제할까?")) return;
     const { error } = await supabase.from('truck_orders').delete().eq('id', id);
     if (!error) await fetchData();
   };
 
+  // ✅ 배차 정보 저장 로직
   const handleResponseSubmit = async (orderId: number) => {
     const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
     if (existing) {
@@ -181,15 +188,15 @@ export default function TruckPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {/* ✨ 관리자(admin)만 엑셀 다운로드 버튼 보이기 */}
-          {userRole === 'admin' && (
+          {/* ✨ 관리자(admin)만 엑셀 버튼 보이기 (truck_vendor는 숨김) */}
+          {userRole !== 'truck_vendor' && (
             <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all text-sm font-black">📊 엑셀 다운로드</button>
           )}
           <button onClick={() => { setSelectedOrder(null); setFormData(initialFormState); setShowOrderModal(true); }} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg hover:scale-105 transition-all text-sm font-black">+ 신규 배차 신청</button>
         </div>
       </div>
 
-      {/* 🔍 검색 필터 */}
+      {/* 검색 필터 유지 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -223,7 +230,7 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 📋 메인 테이블 */}
+      {/* 테이블 영역 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm font-black">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
@@ -256,13 +263,14 @@ export default function TruckPage() {
                     <td className="p-5 text-center">
                       <div className="flex gap-2 justify-center text-[10px]">
                         <button onClick={(e) => { e.stopPropagation(); setSelectedOrder(item); setFormData({...item}); setOrderType(item.order_type); setShowOrderModal(true); }} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-black">수정</button>
-                        {/* ✨ 관리자(admin)만 삭제 버튼 보이기 */}
-                        {userRole === 'admin' && (
+                        {/* ✨ 관리자(admin)만 삭제 버튼 보이기 (truck_vendor는 숨김) */}
+                        {userRole !== 'truck_vendor' && (
                           <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg font-black">삭제</button>
                         )}
                       </div>
                     </td>
                   </tr>
+                  {/* 확장 행 유지 */}
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
                       <td colSpan={6} className="p-8">
@@ -301,7 +309,7 @@ export default function TruckPage() {
           </tbody>
         </table>
       </div>
-
+      {/* 모달 영역 유지 */}
       {showOrderModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden font-black">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300 relative text-black flex flex-col">
