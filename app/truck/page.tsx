@@ -3,15 +3,12 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase"; 
 
 export default function TruckPage() {
-  // --- 상태 관리 ---
   const [list, setList] = useState<any[]>([]);
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-
-  // ✨ 유저 권한 상태 (초기값 null)
   const [userRole, setUserRole] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,8 +27,7 @@ export default function TruckPage() {
   });
 
   const initialFormState = {
-    loading_date: today,
-    unloading_date: today,
+    loading_date: today, unloading_date: today,
     loading_place: "", loading_address: "", loading_manager: "", loading_phone: "",
     unloading_place: "", unloading_address: "", unloading_manager: "", unloading_phone: "",
     unloading_place_2: "", unloading_address_2: "", unloading_manager_2: "", unloading_phone_2: "",
@@ -42,20 +38,11 @@ export default function TruckPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
 
-  // ✨ 권한 확인 및 데이터 호출 로직
   useEffect(() => { 
     const init = async () => {
-      // 1. 세션에서 유저 정보 가져오기
       const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      
-      // 2. 메타데이터에서 role 추출 (여러 경로 대응)
-      const role = user?.user_metadata?.role || user?.app_metadata?.role || "guest";
+      const role = session?.user?.user_metadata?.role || "guest";
       setUserRole(role);
-      
-      console.log("🔥 현재 로그인한 유저의 역할:", role);
-      
-      // 3. 데이터 가져오기
       fetchData(); 
     };
     init();
@@ -77,7 +64,6 @@ export default function TruckPage() {
     }
   };
 
-  // 🚀 배차 신청/수정 로직
   const handleOrderSubmit = async () => {
     if (!formData.loading_place || !formData.unloading_place) return alert("필수 정보를 입력해주세요.");
     const { order_responses, created_at, id, ...pureData } = formData as any;
@@ -92,14 +78,12 @@ export default function TruckPage() {
     }
   };
 
-  // 🗑️ 삭제 로직
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제할까?")) return;
     const { error } = await supabase.from('truck_orders').delete().eq('id', id);
     if (!error) await fetchData();
   };
 
-  // ✅ 배차 정보 저장 로직
   const handleResponseSubmit = async (orderId: number) => {
     const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
     if (existing) {
@@ -173,12 +157,9 @@ export default function TruckPage() {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
-      
-      {/* 🔵 헤더 */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full shadow-lg"></div> 
@@ -188,7 +169,7 @@ export default function TruckPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {/* ✨ 관리자(admin)만 엑셀 버튼 보이기 (truck_vendor는 숨김) */}
+          {/* ✨ truck_vendor가 아닐 때만 엑셀 버튼 보이기 */}
           {userRole !== 'truck_vendor' && (
             <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all text-sm font-black">📊 엑셀 다운로드</button>
           )}
@@ -196,7 +177,6 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 검색 필터 유지 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -230,14 +210,13 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 테이블 영역 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm font-black">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
               <th className="p-5 w-16">No</th>
               <th className="p-5 w-32">작성일자</th>
-              <th className="p-5 text-left">배차 정보 (상차지 👉 하차지)</th>
+              <th className="p-5 text-left">배차 정보</th>
               <th className="p-5 w-32">상차일자</th>
               <th className="p-5 w-24">상태</th>
               <th className="p-5 w-32">관리</th>
@@ -246,50 +225,46 @@ export default function TruckPage() {
           <tbody>
             {currentItems.map((item, index) => {
               const isExpanded = expandedId === item.id;
-              const displayNo = filteredList.length - (indexOfFirstItem + index);
               return (
                 <React.Fragment key={item.id}>
                   <tr onClick={() => toggleExpand(item.id)} className="cursor-pointer hover:bg-slate-50 border-b transition-colors text-center">
-                    <td className="p-5 text-blue-600">{displayNo}</td>
+                    <td className="p-5 text-blue-600">{index + 1}</td>
                     <td className="p-5 text-slate-400 text-xs font-bold">{item.created_at.split('T')[0]}</td>
                     <td className="p-5 text-left">
-                      <p className="text-slate-800 text-base tracking-tight font-black">{item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}</p>
-                      <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-bold">📦 {item.product_name} {item.product_name_2 && `| ${item.product_name_2}`}</p>
+                      <p className="text-slate-800 text-base tracking-tight font-black">{item.loading_place} 👉 {item.unloading_place}</p>
                     </td>
                     <td className="p-5 text-slate-800 text-xs font-black">{item.loading_date}</td>
                     <td className="p-5">
-                      <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
+                      <span className={`text-[10px] px-4 py-1.5 rounded-full ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{item.status}</span>
                     </td>
                     <td className="p-5 text-center">
                       <div className="flex gap-2 justify-center text-[10px]">
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedOrder(item); setFormData({...item}); setOrderType(item.order_type); setShowOrderModal(true); }} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-black">수정</button>
-                        {/* ✨ 관리자(admin)만 삭제 버튼 보이기 (truck_vendor는 숨김) */}
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedOrder(item); setFormData({...item}); setShowOrderModal(true); }} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-black">수정</button>
+                        {/* ✨ truck_vendor가 아닐 때만 삭제 버튼 보이기 */}
                         {userRole !== 'truck_vendor' && (
                           <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg font-black">삭제</button>
                         )}
                       </div>
                     </td>
                   </tr>
-                  {/* 확장 행 유지 */}
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
                       <td colSpan={6} className="p-8">
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
                             <div className="grid grid-cols-2 gap-8 text-black text-left font-black">
                               <div className="space-y-4">
-                                 <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">📍 Loading & Unloading Info</p>
+                                 <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">📍 운송 정보</p>
                                  <div className="bg-slate-50 p-6 rounded-3xl text-xs space-y-2 font-black">
                                     <p><span className="text-slate-400">상차:</span> {item.loading_place} / {item.loading_address}</p>
-                                    <p><span className="text-slate-400">하차1:</span> {item.unloading_place} ({item.product_name})</p>
-                                    {item.unloading_place_2 && <p><span className="text-slate-400">하차2:</span> {item.unloading_place_2} ({item.product_name_2})</p>}
+                                    <p><span className="text-slate-400">하차:</span> {item.unloading_place}</p>
                                     <p className="pt-2 text-red-500 font-bold font-black underline underline-offset-4 decoration-2">비고: {item.remarks || "없음"}</p>
                                  </div>
                               </div>
                               <div className="space-y-4 font-black">
-                                 <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">🚛 Driver & Fee Dispatch</p>
+                                 <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">🚛 기사 정보</p>
                                  <div className="grid grid-cols-2 gap-3 items-end">
                                     <input placeholder="차량정보" className="p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner font-black" value={resData.car_info} onChange={e => setResData({...resData, car_info: e.target.value})} />
-                                    <input placeholder="기사명 연락처" className="p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner font-black" value={resData.driver_name} onChange={e => setResData({...resData, driver_name: e.target.value})} />
+                                    <input placeholder="기사명" className="p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner font-black" value={resData.driver_name} onChange={e => setResData({...resData, driver_name: e.target.value})} />
                                     <input placeholder="운반비" className="p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner text-blue-600 font-black" value={resData.fee} onChange={e => setResData({...resData, fee: e.target.value})} />
                                     <select className="p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner font-black text-blue-600" value={resData.status} onChange={e => setResData({...resData, status: e.target.value})}>
                                        <option value="신청완료">신청완료</option>
@@ -309,7 +284,7 @@ export default function TruckPage() {
           </tbody>
         </table>
       </div>
-      {/* 모달 영역 유지 */}
+
       {showOrderModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden font-black">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300 relative text-black flex flex-col">
@@ -338,38 +313,16 @@ export default function TruckPage() {
                     <option value="">상차지 즐겨찾기</option>
                     {bookmarks.filter(b => b.type === '상차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
                   </select>
-                  <select onChange={e => {
-                    const s = staffs.find(x => x.name === e.target.value);
-                    setFormData(prev => ({...prev, loading_manager: e.target.value, loading_phone: s?.phone || ""}));
-                  }} className="p-5 bg-slate-50 rounded-2xl text-sm border-none shadow-inner text-blue-600 outline-none font-black">
-                    <option value="">담당자 선택</option>
-                    {staffs.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                  </select>
                 </div>
                 <input value={formData.loading_place} placeholder="상차지 명칭" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner font-black text-black" onChange={e => setFormData({...formData, loading_place: e.target.value})} />
                 <input value={formData.loading_address} placeholder="상차지 주소" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner font-black text-black" onChange={e => setFormData({...formData, loading_address: e.target.value})} />
               </section>
               <section className="space-y-4 p-8 bg-blue-50/50 rounded-[2.5rem] border border-blue-100 shadow-inner font-black">
-                <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black ml-2 italic font-black">Unloading Point 1</p>
-                <select onChange={e => autoFillUnloading(e.target.value, 1)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none font-black text-black">
-                  <option value="">하차지 즐겨찾기</option>
-                  {bookmarks.filter(b => b.type === '하차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
-                </select>
-                <input value={formData.unloading_place} placeholder="하차지1 명칭" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black font-black" onChange={e => setFormData({...formData, unloading_place: e.target.value})} />
-                <input value={formData.unloading_address} placeholder="하차지1 주소" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black font-black" onChange={e => setFormData({...formData, unloading_address: e.target.value})} />
-                <input value={formData.product_name} placeholder="📦 제품명 및 수량 (하차1)" className="w-full p-5 bg-blue-600 text-white placeholder:text-blue-200 rounded-2xl border-none text-sm shadow-md font-black" onChange={e => setFormData({...formData, product_name: e.target.value})} />
+                <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black ml-2 italic font-black">Unloading Point</p>
+                <input value={formData.unloading_place} placeholder="하차지 명칭" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black font-black" onChange={e => setFormData({...formData, unloading_place: e.target.value})} />
+                <input value={formData.product_name} placeholder="📦 제품명 및 수량" className="w-full p-5 bg-blue-600 text-white placeholder:text-blue-200 rounded-2xl border-none text-sm shadow-md font-black" onChange={e => setFormData({...formData, product_name: e.target.value})} />
               </section>
-              <section className="space-y-4 p-8 bg-slate-100/50 rounded-[2.5rem] border border-slate-200 shadow-inner font-black">
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black ml-2 italic font-black">Unloading Point 2 (Optional)</p>
-                <select onChange={e => autoFillUnloading(e.target.value, 2)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none font-black text-black">
-                  <option value="">하차지 즐겨찾기</option>
-                  {bookmarks.filter(b => b.type === '하차지').map(b => <option key={b.id} value={b.place_name}>{b.place_name}</option>)}
-                </select>
-                <input value={formData.unloading_place_2} placeholder="하차지2 명칭" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black font-black" onChange={e => setFormData({...formData, unloading_place_2: e.target.value})} />
-                <input value={formData.unloading_address_2} placeholder="하차지2 주소" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black font-black" onChange={e => setFormData({...formData, unloading_address_2: e.target.value})} />
-                <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-5 bg-slate-800 text-white placeholder:text-slate-400 rounded-2xl border-none text-sm shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: e.target.value})} />
-              </section>
-              <textarea value={formData.remarks} placeholder="📝 기타 비고 (특이사항)" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner h-32 font-black text-black font-black" onChange={e => setFormData({...formData, remarks: e.target.value})} />
+              <textarea value={formData.remarks} placeholder="📝 기타 비고" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner h-32 font-black text-black font-black" onChange={e => setFormData({...formData, remarks: e.target.value})} />
               <button onClick={handleOrderSubmit} className="w-full p-6 bg-blue-600 text-white rounded-[2.5rem] text-xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest font-black">
                 {selectedOrder ? 'Save Changes 💾' : 'Submit Dispatch 🚀'}
               </button>
