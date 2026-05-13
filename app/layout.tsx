@@ -2,36 +2,53 @@
 import './globals.css';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { usePathname, useRouter } from "next/navigation"; // ✨ useRouter 추가
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); // ✨ 추가
+  const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const email = user?.email || null;
-      setUserEmail(email);
+    // 1. 초기 세션 확인
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserEmail(session?.user?.email || null);
       setLoading(false);
-
-      // ✨ [보안] 주희님 이메일인데 사고접수나 착불관리 페이지로 직접 들어오면 튕겨내기
-      const forbiddenPaths = ['/accident', '/cod'];
-      if (email === 'joohee@nyil.co.kr' && forbiddenPaths.includes(pathname)) {
-        alert("접근 권한이 없습니다.");
-        router.push("/truck"); // 🚚 용차 배차로 강제 이동
-      }
     };
-    checkUser();
-  }, [pathname, router]);
+    initSession();
 
+    // 2. 로그인 상태 변경 감지 (로그아웃이나 로그인 시 즉시 반영)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 3. 주희님 강제 튕기기 로직 (별도 효과로 분리)
+  useEffect(() => {
+    if (!loading && userEmail === 'joohee@nyil.co.kr') {
+      const forbiddenPaths = ['/accident', '/cod'];
+      if (forbiddenPaths.includes(pathname)) {
+        alert("접근 권한이 없습니다.");
+        router.push("/truck");
+      }
+    }
+  }, [pathname, userEmail, loading, router]);
+
+  // ✨ 로그아웃 함수 수정 (auth.signOut()으로 정확히 호출)
   const handleLogout = async () => {
     if (confirm("로그아웃 하시겠습니까?")) {
-      await supabase.signOut();
-      window.location.href = "/login";
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        alert("로그아웃 중 오류가 발생했습니다.");
+      } else {
+        // 확실하게 새로고침하면서 로그인 페이지로 이동
+        window.location.href = "/login";
+      }
     }
   };
 
@@ -43,8 +60,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // ✨ 주희님 체크 변수
-  const isJoohee = userEmail === 'joohee@nyil.co.kr';
+  // ✨ 주희님 체크 (이메일 앞뒤 공백 제거 및 소문자 변환으로 더 정확하게!)
+  const isJoohee = userEmail?.trim().toLowerCase() === 'joohee@nyil.co.kr';
 
   return (
     <html lang="ko">
@@ -69,18 +86,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-xl group-hover:scale-110">🚚</span> <span>용차 배차</span>
             </Link>
 
-            {/* ✨ 주희님이 아닐 때만 '사고 접수' 메뉴 노출 */}
-            {!isJoohee && (
-              <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
-                <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
-              </Link>
-            )}
+            {/* ✨ 주희님이 아닐 때만 노출 (로딩 중이 아닐 때 확실히 체크) */}
+            {!loading && !isJoohee && (
+              <>
+                <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
+                  <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
+                </Link>
 
-            {/* ✨ 주희님이 아닐 때만 '착불 관리' 메뉴 노출 */}
-            {!isJoohee && (
-              <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
-                <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
-              </Link>
+                <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+                  <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
+                </Link>
+              </>
             )}
 
             <Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-500 transition-all group">
@@ -98,7 +114,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">System Manager</p>
               <p className="text-sm font-bold text-slate-900 mt-1 tracking-tight">천안센터 / 임경민 대리</p>
             </div>
-            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl font-black text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100">
+            {/* 로그아웃 버튼 */}
+            <button 
+              onClick={handleLogout} 
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl font-black text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+            >
               <span>🚪</span> <span className="text-sm uppercase tracking-widest">Logout</span>
             </button>
           </div>
