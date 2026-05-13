@@ -1,32 +1,36 @@
 "use client";
 import './globals.css';
 import Link from 'next/link';
-// ❌ 기존 직접 생성 방식 삭제
-// import { createClient } from "@supabase/supabase-js"; 
-import { supabase } from '@/lib/supabase'; // ✨ lib 폴더에 있는 supabase를 불러와! (경로 확인 필수)
-import { usePathname } from "next/navigation";
+import { supabase } from '@/lib/supabase';
+import { usePathname, useRouter } from "next/navigation"; // ✨ useRouter 추가
 import { useEffect, useState } from "react";
-
-// ❌ 여기 있던 supabase 생성 코드(createClient)를 통째로 삭제했어!
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter(); // ✨ 추가
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getRole = async () => {
-      // ✨ 이제 위에서 import한 단일 supabase 객체를 사용해!
+    const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setRole(user?.user_metadata?.role || 'user');
+      const email = user?.email || null;
+      setUserEmail(email);
       setLoading(false);
+
+      // ✨ [보안] 주희님 이메일인데 사고접수나 착불관리 페이지로 직접 들어오면 튕겨내기
+      const forbiddenPaths = ['/accident', '/cod'];
+      if (email === 'joohee@nyil.co.kr' && forbiddenPaths.includes(pathname)) {
+        alert("접근 권한이 없습니다.");
+        router.push("/truck"); // 🚚 용차 배차로 강제 이동
+      }
     };
-    getRole();
-  }, [pathname]);
+    checkUser();
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     if (confirm("로그아웃 하시겠습니까?")) {
-      await supabase.auth.signOut();
+      await supabase.signOut();
       window.location.href = "/login";
     }
   };
@@ -38,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </html>
     );
   }
+
+  // ✨ 주희님 체크 변수
+  const isJoohee = userEmail === 'joohee@nyil.co.kr';
 
   return (
     <html lang="ko">
@@ -62,23 +69,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-xl group-hover:scale-110">🚚</span> <span>용차 배차</span>
             </Link>
 
-            <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
-              <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
-            </Link>
+            {/* ✨ 주희님이 아닐 때만 '사고 접수' 메뉴 노출 */}
+            {!isJoohee && (
+              <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
+                <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
+              </Link>
+            )}
 
-            <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
-              <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
-            </Link>
+            {/* ✨ 주희님이 아닐 때만 '착불 관리' 메뉴 노출 */}
+            {!isJoohee && (
+              <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+                <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
+              </Link>
+            )}
 
             <Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-500 transition-all group">
               <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
             </Link>
             
             <Link href="/staff" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-green-600 transition-all group">
-  <span className="text-xl group-hover:scale-110">👥</span> 
-  {/* ✨ whitespace-nowrap 추가해서 절대 안 꺾이게 하고, text-sm으로 크기를 살짝 조절 */}
-  <span className="whitespace-nowrap text-sm tracking-tighter">상차 담당자 관리</span>
-</Link>
+              <span className="text-xl group-hover:scale-110">👥</span> 
+              <span className="whitespace-nowrap text-sm tracking-tighter">상차 담당자 관리</span>
+            </Link>
           </div>
 
           <div className="mt-auto space-y-4">
