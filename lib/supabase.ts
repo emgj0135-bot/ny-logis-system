@@ -8,7 +8,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // ✨ 세션 저장 위치를 명확히 지정해서 브라우저가 헷갈리지 않게 함
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    flowType: 'pkce', // ✨ 보안 통신 타입을 명시해서 브라우저 간섭을 줄여!
+  },
+  // ✨ 통신 실패 시 자동으로 다시 시도하게 설정
+  global: {
+    fetch: (...args) => fetch(...args),
   }
 })
