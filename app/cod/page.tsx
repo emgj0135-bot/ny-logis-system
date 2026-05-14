@@ -113,7 +113,7 @@ export default function CodPage() {
     setSelectedIds(ids.every(id => selectedIds.includes(id)) ? prev => prev.filter(id => !ids.includes(id)) : prev => Array.from(new Set([...prev, ...ids])));
   };
   const handleBulkUpdate = async (targetStatus: '확인됨' | '미확인') => {
-    if (selectedIds.length === 0) return alert("항목을 선택해줘!");
+    if (selectedIds.length === 0) return alert("항목을 선택해주세요.");
     const { error } = await supabase.from('cod_manage').update({ status: targetStatus, is_confirmed: targetStatus === '확인됨' }).in('id', selectedIds);
     if (!error) { alert("업데이트 완료!"); fetchCod(); }
   };
@@ -131,7 +131,7 @@ export default function CodPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("삭제할까?")) { await supabase.from('cod_manage').delete().eq('id', id); fetchCod(); }
+    if (confirm("삭제하시겠습니까?")) { await supabase.from('cod_manage').delete().eq('id', id); fetchCod(); }
   };
 
   const openModal = (item: any = null) => {
