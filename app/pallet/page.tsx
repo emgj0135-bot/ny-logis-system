@@ -1,8 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase"; 
+// ✅ 1. supabase 변수 대신 createClient 함수를 가져오기
+import { createClient } from "@/lib/supabase"; 
 
 export default function PalletsPage() {
+  // ✅ 2. 컴포넌트 안에서 supabase 머신 돌리기
+  const supabase = createClient(); 
+
   const [list, setList] = useState<any[]>([]);
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
