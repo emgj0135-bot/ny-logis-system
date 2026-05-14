@@ -1,8 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase"; 
+// ✅ 1. 여기서 만들어둔 머신(createClient)을 가져오고!
+import { createClient } from "@/lib/supabase"; 
 
 export default function TruckPage() {
+  // ✅ 2. 컴포넌트 안에서 직접 supabase를 뽑아 쓴다!
+  const supabase = createClient();
+
   // --- 상태 관리 ---
   const [list, setList] = useState<any[]>([]);
   const [filteredList, setFilteredList] = useState<any[]>([]);
