@@ -88,7 +88,7 @@ export default function TruckPage() {
 
   // 🗑️ 삭제 로직
   const handleDelete = async (id: number) => {
-    if (!confirm("정말 삭제할까?")) return;
+    if (!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from('truck_orders').delete().eq('id', id);
     if (!error) await fetchData();
   };
