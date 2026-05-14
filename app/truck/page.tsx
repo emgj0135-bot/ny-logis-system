@@ -4,8 +4,8 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase"; 
 
 export default function TruckPage() {
-  // ✅ 2. 컴포넌트 안에서 직접 supabase를 뽑아 쓴다!
-  const supabase = createClient();
+  // ✅ 2. 컴포넌트 안에서 직접 supabase를 뽑아 쓴다! (경고 없애기 위해 useState 사용!)
+  const [supabase] = useState(() => createClient());
 
   // --- 상태 관리 ---
   const [list, setList] = useState<any[]>([]);
@@ -45,7 +45,7 @@ export default function TruckPage() {
 
   useEffect(() => { 
     fetchData(); 
-    // 👇 엑셀 라이브러리 불러오는 코드 추가!
+    // 👇 엑셀 라이브러리 불러오는 코드
     if (!document.getElementById('xlsx-script')) {
       const script = document.createElement('script');
       script.id = 'xlsx-script';
@@ -70,7 +70,7 @@ export default function TruckPage() {
     }
   };
 
-  // 🚀 배차 신청/수정 로직 (await 추가로 데이터 반영 보장)
+  // 🚀 배차 신청/수정 로직
   const handleOrderSubmit = async () => {
     if (!formData.loading_place || !formData.unloading_place) return alert("필수 정보를 입력해주세요.");
     
@@ -86,14 +86,14 @@ export default function TruckPage() {
     }
   };
 
-  // 🗑️ 삭제 로직 (await 추가)
+  // 🗑️ 삭제 로직
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제할까?")) return;
     const { error } = await supabase.from('truck_orders').delete().eq('id', id);
     if (!error) await fetchData();
   };
 
-  // ✅ 배차 정보 저장 로직 (await 추가)
+  // ✅ 배차 정보 저장 로직
   const handleResponseSubmit = async (orderId: number) => {
     const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
     if (existing) {
@@ -149,17 +149,40 @@ export default function TruckPage() {
     }
   };
 
+  // 🚀 엑셀 다운로드 함수 (버그 수정)
   const downloadExcel = async () => {
     try {
       const XLSX = (window as any).XLSX;
-      if (!XLSX) return alert("라이브러리 로딩 중입니다.");
-      const { data } = await supabase.from('truck_orders').select(`*, order_responses(*)`).gte('loading_date', excelRange.start).lte('loading_date', excelRange.end).order('loading_date', { ascending: true });
-      if (!data || data.length === 0) return alert("데이터가 없습니다.");
-      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "상차일자": item.loading_date, "배차유형": item.order_type, "상차지": item.loading_place, "하차지1": item.unloading_place, "기사명": item.order_responses?.[0]?.driver_name || "미등록", "상태": item.status }));
+      if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
+      
+      const { data, error } = await supabase
+        .from('truck_orders')
+        .select(`*, order_responses(*)`)
+        .gte('loading_date', excelRange.start)
+        .lte('loading_date', excelRange.end)
+        .order('loading_date', { ascending: true });
+        
+      if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
+      
+      const excelData = data.map((item, index) => ({ 
+        "No": index + 1, 
+        "작성일자": item.created_at.split('T')[0], 
+        "상차일자": item.loading_date, 
+        "배차유형": item.order_type, 
+        "상차지": item.loading_place, 
+        "하차지1": item.unloading_place,
+        "하차지2": item.unloading_place_2 || "-",
+        "제품명": item.product_name,
+        "기사명": item.order_responses?.[0]?.driver_name || "미등록",
+        "차량정보": item.order_responses?.[0]?.car_info || "미등록",
+        "운반비": item.order_responses?.[0]?.fee || "0",
+        "상태": item.status 
+      }));
+      
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "용차배차내역");
-      XLSX.writeFile(workbook, `용차배차_${excelRange.start}.xlsx`);
+      XLSX.writeFile(workbook, `용차배차_${excelRange.start}_${excelRange.end}.xlsx`);
       setShowExcelModal(false);
     } catch (err) { alert("엑셀 생성 오류!"); }
   };
@@ -187,7 +210,7 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (생략 - 기존 코드 유지) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -221,7 +244,7 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 📋 메인 테이블 (생략 - 기존 코드 유지) */}
+      {/* 📋 메인 테이블 */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm font-black">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
@@ -295,10 +318,38 @@ export default function TruckPage() {
             })}
           </tbody>
         </table>
-        {/* 페이지네이션 생략 */}
+        
+        {/* 🔢 페이지네이션 */}
+        <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
+          <button onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => Math.max(prev - 1, 1)); }} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black hover:bg-slate-100 disabled:opacity-30">PREV</button>
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i+1} onClick={(e) => { e.stopPropagation(); setCurrentPage(i+1); }} className={`w-10 h-10 rounded-xl text-xs transition-all font-black ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}>{i+1}</button>
+            ))}
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => Math.min(prev + 1, totalPages)); }} disabled={currentPage === totalPages || totalPages === 0} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black hover:bg-slate-100 disabled:opacity-30">NEXT</button>
+        </div>
       </div>
 
-      {/* 🟢 신규/수정 신청 모달 (닫기 버튼 고정 핵심!) */}
+      {/* 📥 엑셀 기간 선택 모달 (✨ 새로 추가된 부분!) */}
+      {showExcelModal && (
+        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-black mb-2 text-slate-800 tracking-tight uppercase">Excel Download</h2>
+            <p className="text-slate-400 text-xs font-bold mb-6">다운로드할 상차일자 기간을 선택하세요.</p>
+            <div className="space-y-4 font-black">
+              <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
+              <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
+              <div className="flex gap-3 pt-4">
+                <button onClick={downloadExcel} className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs hover:bg-green-700 shadow-lg shadow-green-50">엑셀 생성 및 저장</button>
+                <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-6 rounded-2xl font-black text-xs">취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 신규/수정 신청 모달 */}
       {showOrderModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden font-black">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300 relative text-black flex flex-col">
@@ -350,7 +401,7 @@ export default function TruckPage() {
                 <input value={formData.loading_address} placeholder="상차지 주소" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner font-black text-black" onChange={e => setFormData({...formData, loading_address: e.target.value})} />
               </section>
 
-              {/* 하차지 섹션들 생략 - 기존 디자인과 동일 */}
+              {/* 하차지 섹션 */}
               <section className="space-y-4 p-8 bg-blue-50/50 rounded-[2.5rem] border border-blue-100 shadow-inner font-black">
                 <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black ml-2 italic font-black">Unloading Point 1</p>
                 <select onChange={e => autoFillUnloading(e.target.value, 1)} className="w-full p-5 bg-white rounded-2xl text-sm border-none shadow-sm outline-none font-black text-black">
