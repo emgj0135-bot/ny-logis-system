@@ -62,8 +62,8 @@ export default function AccidentPage() {
 
   // 🗑️ 일괄 삭제 로직 (추가!)
   const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해줘! 👆");
-    if (!confirm(`정말 선택한 ${selectedIds.length}개의 사고 기록을 싹 지울까? 💣`)) return;
+    if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해주세요! 👆");
+    if (!confirm(`정말 선택한 ${selectedIds.length}개의 사고 기록을 싹 지우시겠습니까? 💣`)) return;
     
     const { error } = await supabase.from('accidents').delete().in('id', selectedIds);
     if (!error) { 
