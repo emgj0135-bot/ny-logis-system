@@ -84,18 +84,18 @@ export default function PalletsPage() {
 
   // 🚀 일괄 상태 업데이트 (새로 추가됨!)
   const handleBulkUpdate = async (targetStatus: '확인완료' | '미확인') => {
-    if (selectedIds.length === 0) return alert("변경할 항목을 먼저 선택해줘! 👆");
+    if (selectedIds.length === 0) return alert("변경할 항목을 먼저 선택해주세요 👆");
     const { error } = await supabase.from('pallets').update({ status: targetStatus }).in('id', selectedIds);
     if (!error) { 
-      alert(`선택한 항목들이 '${targetStatus}'(으)로 변경됐어! ✨`); 
+      alert(`선택한 항목들이 '${targetStatus}'(으)로 변경됐습니다 ✨`); 
       await fetchData(); 
     }
   };
 
   // 🗑️ 일괄 삭제 (새로 추가됨!)
   const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해줘! 👆");
-    if (!confirm(`정말 선택한 ${selectedIds.length}개의 전표를 싹 지울까? 💣`)) return;
+    if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해주세요 👆");
+    if (!confirm(`정말 선택한 ${selectedIds.length}개의 전표를 싹 지우시겠습니까? 💣`)) return;
     
     const { error } = await supabase.from('pallets').delete().in('id', selectedIds);
     if (!error) { 
