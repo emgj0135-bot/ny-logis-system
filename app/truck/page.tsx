@@ -45,6 +45,13 @@ export default function TruckPage() {
 
   useEffect(() => { 
     fetchData(); 
+    // 👇 엑셀 라이브러리 불러오는 코드 추가!
+    if (!document.getElementById('xlsx-script')) {
+      const script = document.createElement('script');
+      script.id = 'xlsx-script';
+      script.src = "https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js";
+      document.head.appendChild(script);
+    }
   }, []);
 
   const fetchData = async () => {
