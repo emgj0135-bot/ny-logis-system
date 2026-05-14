@@ -1,8 +1,12 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+// ✅ 1. createClient 가져오기
+import { createClient } from '../../lib/supabase';
 
 export default function CodPage() {
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 돌리기
+  const supabase = createClient();
+
   const [list, setList] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showExcelModal, setShowExcelModal] = useState(false);
