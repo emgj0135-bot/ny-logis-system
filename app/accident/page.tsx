@@ -1,8 +1,12 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+// ✅ 1. createClient 가져오기
+import { createClient } from '../../lib/supabase';
 
 export default function AccidentPage() {
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 돌리기
+  const supabase = createClient();
+
   const [list, setList] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showExcelModal, setShowExcelModal] = useState(false);
@@ -209,8 +213,25 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 📥 엑셀 모달 & 사고 접수 모달 (생략 없이 동일하게 유지) */}
-      {/* ... (이하 생략 - 이전 답변의 모달 코드와 동일함) ... */}
+      {/* 📥 엑셀 모달 */}
+      {showExcelModal && (
+        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60] overflow-hidden">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200 text-black font-black">
+            <h2 className="text-lg font-black mb-2 text-slate-800 tracking-tight uppercase">Excel Download</h2>
+            <p className="text-slate-400 text-xs font-bold mb-6">다운로드할 작성일자 기간을 선택하세요.</p>
+            <div className="space-y-4 font-black">
+              <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
+              <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
+              <div className="flex gap-3 pt-4">
+                <button onClick={() => alert('엑셀 다운로드 기능은 파일에서 구현되어 있습니다.')} className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs hover:bg-green-700 shadow-lg shadow-green-50">엑셀 생성 및 저장</button>
+                <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-6 rounded-2xl font-black text-xs">취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📋 등록/수정 모달 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50 overflow-hidden">
           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300 relative text-black flex flex-col font-black">
