@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase"; // ✨ lib/supabase.ts 경로가 맞는지 확인!
+// ✅ 1. createClient 함수 가져오기로 수정
+import { createClient } from "@/lib/supabase"; 
 import Link from "next/link";
 
 export default function MainPage() {
+  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 돌리기
+  const supabase = createClient();
+
   const [counts, setCounts] = useState({
     pallets: 0,
     trucks: 0,
