@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-// ❌ 삭제: import { createClient } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase"; // ✨ lib 폴더의 단일 인스턴스 불러오기
+// ✅ 1. supabase 변수 대신 createClient 함수로 가져오기!
+import { createClient } from "@/lib/supabase"; 
 import Link from "next/link";
 
-// ❌ 삭제: const supabase = createClient(...);
-
 export default function DashboardPage() {
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 돌리기!
+  const supabase = createClient();
+
   const [counts, setCounts] = useState({
     pallets: 0,
     trucks: 0,
