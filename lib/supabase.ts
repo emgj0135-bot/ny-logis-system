@@ -5,10 +5,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,    // 세션 유지!
-    autoRefreshToken: true,  // 토큰 자동 갱신!
+    persistSession: true,    // ✅ 중요: 브라우저에 로그인 정보 저장
+    autoRefreshToken: true,  // ✅ 중요: 토큰 자동 갱신
     detectSessionInUrl: true,
-    storageKey: 'ny-logis-auth', // 고유 저장소 키 지정 (충돌 방지)
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined, // 브라우저 저장소 명시
+    storageKey: 'ny-logis-auth-key' // ✅ 충돌 방지를 위한 고유 키
   }
 })
