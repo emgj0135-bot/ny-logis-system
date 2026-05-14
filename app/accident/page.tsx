@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '../../lib/supabase';
 
 export default function AccidentPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기! (경고 제거)
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기!
   const [supabase] = useState(() => createClient());
 
   const [list, setList] = useState<any[]>([]);
@@ -15,6 +15,7 @@ export default function AccidentPage() {
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [selectedIds, setSelectedIds] = useState<number[]>([]); // ✨ 일괄 선택용 상태 추가
   const today = new Date().toISOString().split('T')[0];
 
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
@@ -33,7 +34,6 @@ export default function AccidentPage() {
 
   useEffect(() => { 
     fetchAccidents(); 
-    // 👇 엑셀 라이브러리 엔진 켜기!
     if (!document.getElementById('xlsx-script')) {
       const script = document.createElement('script');
       script.id = 'xlsx-script';
@@ -46,8 +46,10 @@ export default function AccidentPage() {
     const { data } = await supabase.from('accidents').select('*').order('created_at', { ascending: false });
     setList(data || []);
     setFilteredList(data || []);
+    setSelectedIds([]); // ✨ 새로고침 시 선택 해제
   };
 
+  // 🗑️ 단일 삭제 로직
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation(); 
     if (!confirm("정말 삭제하시겠습니까?")) return;
@@ -55,6 +57,18 @@ export default function AccidentPage() {
     if (!error) {
       alert("삭제되었습니다. ✨");
       await fetchAccidents();
+    }
+  };
+
+  // 🗑️ 일괄 삭제 로직 (추가!)
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해줘! 👆");
+    if (!confirm(`정말 선택한 ${selectedIds.length}개의 사고 기록을 싹 지울까? 💣`)) return;
+    
+    const { error } = await supabase.from('accidents').delete().in('id', selectedIds);
+    if (!error) { 
+      alert("일괄 삭제 완료! 🗑️"); 
+      await fetchAccidents(); 
     }
   };
 
@@ -91,12 +105,14 @@ export default function AccidentPage() {
     }
     setFilteredList(result);
     setCurrentPage(1);
+    setSelectedIds([]); // ✨ 검색 시 선택 초기화
   };
 
   const resetFilters = () => {
     setFilters({ created_start: "", created_end: "", out_start: "", out_end: "", status: "", search: "" });
     setFilteredList(list);
     setCurrentPage(1);
+    setSelectedIds([]);
   };
 
   const openModal = (item: any = null) => {
@@ -107,33 +123,24 @@ export default function AccidentPage() {
 
   const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
 
-  // 🚀 사고접수 전용 엑셀 다운로드 함수 추가!
+  // ✨ 선택 토글 함수
+  const toggleSelect = (id: number) => setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  const toggleSelectAll = () => {
+    const currentIds = currentItems.map(i => i.id);
+    if (currentIds.every(id => selectedIds.includes(id))) {
+      setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+    }
+  };
+
   const downloadExcel = async () => {
     try {
       const XLSX = (window as any).XLSX;
-      if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
-      
-      const { data, error } = await supabase
-        .from('accidents')
-        .select('*')
-        .gte('created_at', `${excelRange.start}T00:00:00`)
-        .lte('created_at', `${excelRange.end}T23:59:59`)
-        .order('created_at', { ascending: true });
-        
+      if (!XLSX) return alert("라이브러리 로딩 중입니다.");
+      const { data, error } = await supabase.from('accidents').select('*').gte('created_at', `${excelRange.start}T00:00:00`).lte('created_at', `${excelRange.end}T23:59:59`).order('created_at', { ascending: true });
       if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
-      
-      const excelData = data.map((item, index) => ({
-        "No": index + 1,
-        "작성일자": item.created_at.split('T')[0],
-        "출고일자": item.out_date,
-        "송장번호": item.invoice_no,
-        "수령인": item.receiver_name,
-        "사고유형": item.reason,
-        "상태": item.status,
-        "변상금액": item.confirmed_amount,
-        "CJ답변": item.cj_answer || ""
-      }));
-      
+      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "출고일자": item.out_date, "송장번호": item.invoice_no, "수령인": item.receiver_name, "사고유형": item.reason, "상태": item.status, "변상금액": item.confirmed_amount, "CJ답변": item.cj_answer || "" }));
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "사고접수내역");
@@ -142,7 +149,6 @@ export default function AccidentPage() {
     } catch (err) { alert("엑셀 생성 오류!"); }
   };
 
-  // --- 페이지네이션 로직 ---
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
@@ -186,14 +192,19 @@ export default function AccidentPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-3 pt-4 border-t border-slate-50 font-black">
+        <div className="flex gap-3 pt-4 border-t border-slate-50 font-black items-center">
           <select className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs text-slate-600 min-w-[150px] outline-none font-black" value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
             <option value="">상태 전체</option>
             <option value="접수완료">접수완료</option>
             <option value="보상승인">보상승인</option>
           </select>
           <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl text-xs hover:bg-black transition-all font-black uppercase">검색 🔍</button>
-          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl text-xs border border-slate-100 font-black">리셋</button>
+          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl text-xs border border-slate-100 font-black mr-auto">리셋</button>
+          
+          {/* ✨ 일괄 삭제 버튼 추가! */}
+          <div className="bg-slate-100 p-1.5 rounded-2xl">
+            <button onClick={handleBulkDelete} className="bg-white text-red-500 px-6 py-2.5 rounded-xl text-xs font-black shadow-sm hover:bg-red-50 transition-colors">선택 항목 일괄 삭제 🗑️</button>
+          </div>
         </div>
       </div>
 
@@ -202,6 +213,9 @@ export default function AccidentPage() {
         <table className="w-full text-sm font-black">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
+              <th className="p-5 w-12 text-center">
+                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" onChange={toggleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} />
+              </th>
               <th className="p-5 w-16">No</th>
               <th className="p-5 w-32 italic font-black">Created</th>
               <th className="p-5 text-left font-black">사고 내용 (송장 / 수령인)</th>
@@ -214,8 +228,12 @@ export default function AccidentPage() {
           <tbody>
             {currentItems.map((item, index) => {
               const displayNo = filteredList.length - (indexOfFirstItem + index);
+              const isSelected = selectedIds.includes(item.id);
               return (
-                <tr key={item.id} onClick={() => openModal(item)} className="cursor-pointer hover:bg-slate-50 border-b transition-colors text-center font-black">
+                <tr key={item.id} onClick={() => openModal(item)} className={`cursor-pointer hover:bg-slate-50 border-b transition-colors text-center font-black ${isSelected ? 'bg-red-50/30' : ''}`}>
+                  <td className="p-5" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" checked={isSelected} onChange={() => toggleSelect(item.id)} />
+                  </td>
                   <td className="p-5 text-red-600">{displayNo}</td>
                   <td className="p-5 text-slate-400 text-xs font-black">{item.created_at.split('T')[0]}</td>
                   <td className="p-5 text-left font-black">
@@ -240,6 +258,9 @@ export default function AccidentPage() {
                 </tr>
               );
             })}
+            {currentItems.length === 0 && (
+              <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
+            )}
           </tbody>
         </table>
 
@@ -265,7 +286,6 @@ export default function AccidentPage() {
               <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
               <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
               <div className="flex gap-3 pt-4">
-                {/* 👇 여길 진짜 다운로드 함수로 바꿨어! */}
                 <button onClick={downloadExcel} className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs hover:bg-green-700 shadow-lg shadow-green-50">엑셀 생성 및 저장</button>
                 <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-6 rounded-2xl font-black text-xs">취소</button>
               </div>
