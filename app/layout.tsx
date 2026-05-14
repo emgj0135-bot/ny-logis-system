@@ -1,11 +1,15 @@
 "use client";
 import './globals.css';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+// ✅ 1. supabase 대신 createClient 가져오기
+import { createClient } from '@/lib/supabase';
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // ✅ 2. 여기서 supabase 머신 돌려주기!
+  const supabase = createClient();
+
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
