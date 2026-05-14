@@ -1,11 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-// ✅ 1. supabase 변수 대신 createClient 함수를 가져오기
+// ✅ 1. createClient 가져오기
 import { createClient } from "@/lib/supabase"; 
 
 export default function PalletsPage() {
-  // ✅ 2. 컴포넌트 안에서 supabase 머신 돌리기
-  const supabase = createClient(); 
+  // ✅ 2. 컴포넌트 안에서 supabase 머신 딱 한 번만 돌리기 (경고 제거!)
+  const [supabase] = useState(() => createClient()); 
 
   const [list, setList] = useState<any[]>([]);
   const [filteredList, setFilteredList] = useState<any[]>([]);
@@ -50,6 +50,7 @@ export default function PalletsPage() {
     if (!error) {
       setList(data || []);
       setFilteredList(data || []);
+      setSelectedIds([]); // ✨ 데이터 새로 불러오면 체크박스 초기화
     }
   };
 
@@ -58,23 +59,22 @@ export default function PalletsPage() {
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
-  // 🗑️ 삭제 로직 수정 (await 추가 및 에러 핸들링 강화)
+  // 🗑️ 단일 삭제 로직
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation(); 
     if(!confirm("정말 삭제하시겠습니까?")) return;
     
-    // ✨ await를 붙여서 삭제가 완료될 때까지 기다려야 함
     const { error } = await supabase.from('pallets').delete().eq('id', id);
     
     if (error) {
       alert("삭제 실패: " + error.message);
     } else {
       alert("삭제 성공! ✨");
-      await fetchData(); // 목록 갱신 대기
+      await fetchData(); 
     }
   };
 
-  // ✨ 상태 업데이트 수정
+  // ✨ 단일 상태 업데이트
   const handleStatusUpdate = async (e: React.MouseEvent, id: number, currentStatus: string) => {
     e.stopPropagation(); 
     const newStatus = currentStatus === '확인완료' ? '미확인' : '확인완료';
@@ -82,7 +82,29 @@ export default function PalletsPage() {
     if (!error) await fetchData();
   };
 
-  // 🚀 등록 및 수정 로직 수정 (Insert/Update 구분 및 데이터 처리)
+  // 🚀 일괄 상태 업데이트 (새로 추가됨!)
+  const handleBulkUpdate = async (targetStatus: '확인완료' | '미확인') => {
+    if (selectedIds.length === 0) return alert("변경할 항목을 먼저 선택해줘! 👆");
+    const { error } = await supabase.from('pallets').update({ status: targetStatus }).in('id', selectedIds);
+    if (!error) { 
+      alert(`선택한 항목들이 '${targetStatus}'(으)로 변경됐어! ✨`); 
+      await fetchData(); 
+    }
+  };
+
+  // 🗑️ 일괄 삭제 (새로 추가됨!)
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해줘! 👆");
+    if (!confirm(`정말 선택한 ${selectedIds.length}개의 전표를 싹 지울까? 💣`)) return;
+    
+    const { error } = await supabase.from('pallets').delete().in('id', selectedIds);
+    if (!error) { 
+      alert("일괄 삭제 완료! 🗑️"); 
+      await fetchData(); 
+    }
+  };
+
+  // 🚀 등록 및 수정 로직
   const handleSubmit = async () => {
     if (!formData.company_name) return alert("업체명을 입력해주세요.");
     
@@ -100,30 +122,16 @@ export default function PalletsPage() {
     };
 
     if (isEdit && targetId) {
-      // ✨ 수정 모드
       const { error } = await supabase.from('pallets').update(payload).eq('id', targetId);
-      if (error) {
-        alert("수정 실패: " + error.message);
-      } else {
-        alert("수정 완료! ✨");
-        closeModal();
-        await fetchData();
-      }
+      if (error) alert("수정 실패: " + error.message);
+      else { alert("수정 완료! ✨"); closeModal(); await fetchData(); }
     } else {
-      // ✨ 신규 등록 모드
       const { error } = await supabase.from('pallets').insert([{ ...payload, status: '미확인' }]);
-      if (error) {
-        alert("등록 실패: " + error.message);
-      } else {
-        alert("등록 성공! 🚀");
-        closeModal();
-        await fetchData();
-        setCurrentPage(1);
-      }
+      if (error) alert("등록 실패: " + error.message);
+      else { alert("등록 성공! 🚀"); closeModal(); await fetchData(); setCurrentPage(1); }
     }
   };
 
-  // --- 나머지 함수 (필터, 엑셀 등) ---
   const handleSearch = () => {
     let result = [...list];
     if (filters.created_start) result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
@@ -177,7 +185,6 @@ export default function PalletsPage() {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
 
-  // --- 렌더링 (디자인 유지) ---
   return (
     <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       <div className="flex justify-between items-center mb-6">
@@ -194,7 +201,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 검색 필터 */}
+      {/* 🔍 검색 필터 및 일괄 처리 버튼 영역 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10">
           <div className="space-y-3">
@@ -214,7 +221,7 @@ export default function PalletsPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-3 pt-4 border-t border-slate-50">
+        <div className="flex gap-3 pt-4 border-t border-slate-50 items-center">
           <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
             <option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인완료">확인완료</option>
           </select>
@@ -222,7 +229,16 @@ export default function PalletsPage() {
             <option value="">구분 전체</option><option value="출고">출고만 보기</option><option value="입고">입고만 보기</option>
           </select>
           <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">검색 🔍</button>
-          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100">리셋</button>
+          
+          {/* 👇 mr-auto를 줘서 오른쪽 버튼들을 끝으로 밀어냄 */}
+          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100 mr-auto">리셋</button>
+          
+          {/* ✨ 일괄 처리 버튼 3종 세트 추가! */}
+          <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
+            <button onClick={() => handleBulkUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-blue-50 transition-colors">일괄확인 ✅</button>
+            <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-orange-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-orange-50 transition-colors">일괄미확인 ❌</button>
+            <button onClick={handleBulkDelete} className="bg-white text-red-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-red-50 transition-colors">일괄삭제 🗑️</button>
+          </div>
         </div>
       </div>
 
@@ -232,7 +248,7 @@ export default function PalletsPage() {
           <table className="w-full">
             <thead className="bg-slate-50 text-slate-400 font-bold border-b uppercase tracking-widest text-[10px]">
               <tr>
-                <th className="p-6 text-center w-12"><input type="checkbox" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
+                <th className="p-6 text-center w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
                 <th className="p-6 text-left">상태</th>
                 <th className="p-6 text-left">작성일자</th>
                 <th className="p-6 text-center">구분</th> 
@@ -244,8 +260,8 @@ export default function PalletsPage() {
             </thead>
             <tbody className="divide-y divide-slate-50 font-black">
               {currentItems.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-all cursor-pointer" onClick={() => openEditModal(item)}>
-                  <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
+                <tr key={item.id} className={`hover:bg-slate-50 transition-all cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`} onClick={() => openEditModal(item)}>
+                  <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
                   <td className="p-6">
                     <button onClick={(e) => handleStatusUpdate(e, item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 animate-pulse' : 'bg-green-50 text-green-500'}`}>{item.status}</button>
                   </td>
@@ -265,6 +281,9 @@ export default function PalletsPage() {
                   </td>
                 </tr>
               ))}
+              {currentItems.length === 0 && (
+                <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -277,7 +296,7 @@ export default function PalletsPage() {
               <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-8 h-8 rounded-xl text-[10px] font-black ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
             ))}
           </div>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">NEXT</button>
+          <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">NEXT</button>
         </div>
       </div>
 
