@@ -1,15 +1,10 @@
 "use client";
 import { useState } from "react";
-// 1. ssr 패키지에서 createBrowserClient를 가져와야 해!
-import { createBrowserClient } from "@supabase/ssr";
+// ❌ createBrowserClient 삭제!
+// ✅ 우리가 미리 만들어둔 단일 통로(supabase)를 불러와!
+import { supabase } from '@/lib/supabase'; 
 
 export default function LoginPage() {
-  // 2. 브라우저 전용 클라이언트 생성 (쿠키 자동 관리)
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,6 +13,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
+    // ✅ 여기서도 @/lib/supabase에서 가져온 녀석을 그대로 사용해!
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -27,9 +23,8 @@ export default function LoginPage() {
       alert("로그인 실패: " + error.message);
       setLoading(false);
     } else {
-      // 3. 로그인 성공 시 알림 후 메인으로 강제 이동
-      // window.location.href가 가장 확실하게 쿠키를 새로고침하며 이동시켜 줘.
       alert("로그인 성공! 메인으로 이동합니다.");
+      // ✅ window.location.href는 세션을 깨끗하게 새로고침하며 이동시켜줘서 아주 좋아!
       window.location.href = "/"; 
     }
   };
