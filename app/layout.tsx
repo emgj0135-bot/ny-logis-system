@@ -1,28 +1,49 @@
 "use client";
 import './globals.css';
 import Link from 'next/link';
-// ❌ 기존 직접 생성 방식 삭제
-// import { createClient } from "@supabase/supabase-js"; 
-import { supabase } from '@/lib/supabase'; // ✨ lib 폴더에 있는 supabase를 불러와! (경로 확인 필수)
-import { usePathname } from "next/navigation";
+import { supabase } from '@/lib/supabase';
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-// ❌ 여기 있던 supabase 생성 코드(createClient)를 통째로 삭제했어!
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getRole = async () => {
-      // ✨ 이제 위에서 import한 단일 supabase 객체를 사용해!
+      setLoading(true);
+      // 1. 세션에서 유저 정보 가져오기
       const { data: { user } } = await supabase.auth.getUser();
-      setRole(user?.user_metadata?.role || 'user');
+      
+      if (user) {
+        // 2. ✨ 어제랑 다른 점: metadata 대신 DB 테이블에서 직접 role 가져오기
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        setRole(profile?.role || 'user');
+      } else {
+        setRole(null);
+      }
       setLoading(false);
     };
     getRole();
   }, [pathname]);
+
+  // ✨ [보안 가드] 주희님(truck_vendor)이 다른 페이지로 직접 들어오면 튕겨내기
+  useEffect(() => {
+    if (!loading && role === 'truck_vendor') {
+      const forbiddenPaths = ['/accident', '/cod', '/staff', '/pallet'];
+      if (forbiddenPaths.includes(pathname)) {
+        alert("접근 권한이 없습니다.");
+        router.push("/truck");
+      }
+    }
+  }, [pathname, role, loading, router]);
 
   const handleLogout = async () => {
     if (confirm("로그아웃 하시겠습니까?")) {
@@ -39,6 +60,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
+  // 권한 변수 설정
+  const isAdmin = role === 'admin';
+  const isTruckVendor = role === 'truck_vendor';
+
   return (
     <html lang="ko">
       <body className="flex bg-slate-50 min-h-screen font-sans font-black">
@@ -54,37 +79,52 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-xl group-hover:scale-110">🏠</span> <span>대시보드</span>
             </Link>
 
-            <Link href="/pallet" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
-              <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 전표</span>
-            </Link>
+            {/* 관리자만 노출 */}
+            {isAdmin && (
+              <Link href="/pallet" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all group">
+                <span className="text-xl group-hover:scale-110">📦</span> <span>파렛트 전표</span>
+              </Link>
+            )}
 
-            <Link href="/truck" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-all group">
-              <span className="text-xl group-hover:scale-110">🚚</span> <span>용차 배차</span>
-            </Link>
+            {/* 관리자 또는 용차업체 노출 */}
+            {(isAdmin || isTruckVendor) && (
+              <Link href="/truck" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-all group">
+                <span className="text-xl group-hover:scale-110">🚚</span> <span>용차 배차</span>
+              </Link>
+            )}
 
-            <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
-              <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
-            </Link>
+            {/* 관리자만 노출 (사고접수) */}
+            {isAdmin && (
+              <Link href="/accident" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all group">
+                <span className="text-xl group-hover:scale-110">⚠️</span> <span>사고 접수</span>
+              </Link>
+            )}
 
-            <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
-              <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
-            </Link>
+            {/* 관리자만 노출 (착불/즐겨찾기/담당자) */}
+            {isAdmin && (
+              <>
+                <Link href="/cod" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-500 transition-all group">
+                  <span className="text-xl group-hover:scale-110">💰</span> <span>착불 관리</span>
+                </Link>
 
-            <Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-500 transition-all group">
-              <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
-            </Link>
-            
-            <Link href="/staff" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-green-600 transition-all group">
-  <span className="text-xl group-hover:scale-110">👥</span> 
-  {/* ✨ whitespace-nowrap 추가해서 절대 안 꺾이게 하고, text-sm으로 크기를 살짝 조절 */}
-  <span className="whitespace-nowrap text-sm tracking-tighter">상차 담당자 관리</span>
-</Link>
+                <Link href="/bookmarks" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-500 transition-all group">
+                  <span className="text-xl group-hover:scale-110">📌</span> <span>즐겨찾기</span>
+                </Link>
+                
+                <Link href="/staff" className="flex items-center gap-3 p-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:text-green-600 transition-all group">
+                  <span className="text-xl group-hover:scale-110">👥</span> 
+                  <span className="whitespace-nowrap text-sm tracking-tighter">상차 담당자 관리</span>
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="mt-auto space-y-4">
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">System Manager</p>
-              <p className="text-sm font-bold text-slate-900 mt-1 tracking-tight">천안센터 / 임경민 대리</p>
+              <p className="text-sm font-bold text-slate-900 mt-1 tracking-tight">
+                {isAdmin ? "천안센터 / 임경민 대리" : "배차 파트너"}
+              </p>
             </div>
             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl font-black text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100">
               <span>🚪</span> <span className="text-sm uppercase tracking-widest">Logout</span>
