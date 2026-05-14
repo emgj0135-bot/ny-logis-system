@@ -29,17 +29,18 @@ export default function LoginPage() {
 
       if (data?.session) {
         console.log("✅ 3. 로그인 성공, 세션 획득!");
-        // alert 대신 바로 이동해서 브라우저가 통신을 끊을 틈을 주지 말자!
-        window.location.href = "/"; 
-      } else {
-        console.warn("⚠️ 3. 성공인 것 같으나 세션이 없음");
-        setLoading(false);
+        
+        // 브라우저가 "나 이제 페이지 옮길게!"라고 Supabase에 신호를 보내고
+        // 확실히 저장될 때까지 0.3초만 기다려주자.
+        // 이 짧은 대기가 'message channel closed' 에러를 방지해줘.
+        
+        const timer = setTimeout(() => {
+          console.log("🚀 4. 페이지 강제 이동 실행");
+          window.location.replace("/"); // href보다 더 강력한 이동 방식
+        }, 300);
+
+        return () => clearTimeout(timer);
       }
-    } catch (err) {
-      console.error("❌ 4. 예상치 못한 시스템 에러:", err);
-      setLoading(false);
-    }
-  };
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f3f4f6' }}>
