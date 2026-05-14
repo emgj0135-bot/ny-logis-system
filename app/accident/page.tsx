@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '../../lib/supabase';
 
 export default function AccidentPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 돌리기
-  const supabase = createClient();
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기! (경고 제거)
+  const [supabase] = useState(() => createClient());
 
   const [list, setList] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +33,13 @@ export default function AccidentPage() {
 
   useEffect(() => { 
     fetchAccidents(); 
+    // 👇 엑셀 라이브러리 엔진 켜기!
+    if (!document.getElementById('xlsx-script')) {
+      const script = document.createElement('script');
+      script.id = 'xlsx-script';
+      script.src = "https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js";
+      document.head.appendChild(script);
+    }
   }, []);
 
   const fetchAccidents = async () => {
@@ -100,6 +107,41 @@ export default function AccidentPage() {
 
   const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
 
+  // 🚀 사고접수 전용 엑셀 다운로드 함수 추가!
+  const downloadExcel = async () => {
+    try {
+      const XLSX = (window as any).XLSX;
+      if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
+      
+      const { data, error } = await supabase
+        .from('accidents')
+        .select('*')
+        .gte('created_at', `${excelRange.start}T00:00:00`)
+        .lte('created_at', `${excelRange.end}T23:59:59`)
+        .order('created_at', { ascending: true });
+        
+      if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
+      
+      const excelData = data.map((item, index) => ({
+        "No": index + 1,
+        "작성일자": item.created_at.split('T')[0],
+        "출고일자": item.out_date,
+        "송장번호": item.invoice_no,
+        "수령인": item.receiver_name,
+        "사고유형": item.reason,
+        "상태": item.status,
+        "변상금액": item.confirmed_amount,
+        "CJ답변": item.cj_answer || ""
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "사고접수내역");
+      XLSX.writeFile(workbook, `사고접수_${excelRange.start}_${excelRange.end}.xlsx`);
+      setShowExcelModal(false);
+    } catch (err) { alert("엑셀 생성 오류!"); }
+  };
+
   // --- 페이지네이션 로직 ---
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -124,7 +166,7 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (생략된 경우 기존 코드 유지) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
         <div className="flex flex-wrap gap-10 font-black">
           <div className="space-y-3">
@@ -201,7 +243,7 @@ export default function AccidentPage() {
           </tbody>
         </table>
 
-        {/* 🔢 페이지네이션 (복구됨!) */}
+        {/* 🔢 페이지네이션 */}
         <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
           <button onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => Math.max(prev - 1, 1)); }} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black hover:bg-slate-100 disabled:opacity-30">PREV</button>
           <div className="flex gap-1">
@@ -223,7 +265,8 @@ export default function AccidentPage() {
               <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
               <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
               <div className="flex gap-3 pt-4">
-                <button onClick={() => alert('엑셀 다운로드 기능은 파일에서 구현되어 있습니다.')} className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs hover:bg-green-700 shadow-lg shadow-green-50">엑셀 생성 및 저장</button>
+                {/* 👇 여길 진짜 다운로드 함수로 바꿨어! */}
+                <button onClick={downloadExcel} className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs hover:bg-green-700 shadow-lg shadow-green-50">엑셀 생성 및 저장</button>
                 <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-6 rounded-2xl font-black text-xs">취소</button>
               </div>
             </div>
