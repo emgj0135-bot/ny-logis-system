@@ -1,18 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// ✅ 1. 만들어둔 머신(createClient)을 가져오기
+import { createClient } from '@/lib/supabase';
 
 export default function BookmarkPage() {
+  // ✅ 2. Supabase 머신 딱 한 번만 돌리기 (경고 제거)
+  const [supabase] = useState(() => createClient());
+
   const [role, setRole] = useState<string | null>(null);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [tab, setTab] = useState<'상차지' | '하차지'>('상차지');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // 🔢 페이지네이션용 상태 추가
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     place_name: "",
@@ -23,17 +26,32 @@ export default function BookmarkPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [tab]); // ✨ 탭이 바뀔 때도 데이터를 다시 갱신하고 페이지를 초기화하기 위함
 
   const fetchData = async () => {
+    // 🔒 [권한 로직 버그 수정]: user_metadata 대신 profiles 테이블에서 직접 role 가져오기!
     const { data: { user } } = await supabase.auth.getUser();
-    setRole(user?.user_metadata?.role || 'user');
+    
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      setRole(profile?.role || 'user');
+    } else {
+      setRole(null);
+    }
+
     const { data } = await supabase.from('bookmarks').select('*').order('created_at', { ascending: false });
     setBookmarks(data || []);
+    setCurrentPage(1); // 탭 이동이나 새로고침 시 1페이지로 리셋
   };
 
   const handleSubmit = async () => {
     if (role !== 'admin') return alert("관리자만 가능합니다.");
+    if (!formData.place_name || !formData.address) return alert("필수 정보를 입력해주세요.");
     
     if (editingId) {
       const { error } = await supabase.from('bookmarks').update({ ...formData }).eq('id', editingId);
@@ -55,7 +73,10 @@ export default function BookmarkPage() {
 
     const { error } = await supabase.from('bookmarks').delete().eq('id', id);
     if (error) alert(error.message);
-    else fetchData();
+    else {
+      alert("삭제 완료! 🗑️");
+      fetchData();
+    }
   };
 
   const openEditModal = (item: any) => {
@@ -75,10 +96,19 @@ export default function BookmarkPage() {
     setFormData({ place_name: "", address: "", manager_name: "", manager_phone: "" });
   };
 
+  // 🔢 페이지네이션용 데이터 필터링 및 계산
+  const filteredBookmarks = bookmarks.filter(b => b.type === tab);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredBookmarks.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredBookmarks.length / itemsPerPage);
+
+  const isAdmin = role === 'admin';
+
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
+    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       
-      {/* 🔵 블루 포인트 헤더 섹션 - 완벽 통일! */}
+      {/* 🔵 블루 포인트 헤더 섹션 */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
@@ -91,7 +121,7 @@ export default function BookmarkPage() {
             </p>
           </div>
         </div>
-        {role === 'admin' && (
+        {isAdmin && (
           <button 
             onClick={() => setShowModal(true)} 
             className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all text-sm"
@@ -101,7 +131,7 @@ export default function BookmarkPage() {
         )}
       </div>
 
-      {/* 탭 버튼 섹션 - 블루 테마 적용 */}
+      {/* 탭 버튼 섹션 */}
       <div className="flex gap-2 mb-8">
         {['상차지', '하차지'].map((t) => (
           <button 
@@ -116,75 +146,113 @@ export default function BookmarkPage() {
         ))}
       </div>
 
-      {/* 테이블 섹션 - 갱미 스타일로 다듬기 */}
-      <div className="overflow-hidden rounded-[2.5rem] border border-slate-100 shadow-sm bg-white">
-        <table className="w-full text-sm text-left">
+      {/* 테이블 섹션 */}
+      <div className="overflow-hidden rounded-[2.5rem] border border-slate-100 shadow-sm bg-white text-black font-black">
+        <table className="w-full text-sm text-left font-black">
           <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-black tracking-widest">
             <tr>
               <th className="px-10 py-6">정보</th>
               <th className="px-10 py-6">담당자</th>
-              {role === 'admin' && <th className="px-10 py-6 text-center">관리</th>}
+              {isAdmin && <th className="px-10 py-6 text-center">관리</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 font-black">
-            {bookmarks.filter(b => b.type === tab).map((item) => (
+            {currentItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-10 py-8">
                   <p className="font-black text-slate-800 text-lg tracking-tight">{item.place_name}</p>
                   <p className="text-slate-400 text-xs font-bold mt-1 tracking-tight">{item.address}</p>
                 </td>
                 <td className="px-10 py-8">
-                  {tab === '하차지' ? (
+                  {item.type === '하차지' ? (
                     <>
-                      <p className="text-slate-700 text-sm">{item.manager_name}</p>
-                      <p className="text-blue-600 text-xs mt-1">{item.manager_phone}</p>
+                      <p className="text-slate-700 text-sm font-black">{item.manager_name || "-"}</p>
+                      <p className="text-blue-600 text-xs mt-1 font-black">{item.manager_phone || "-"}</p>
                     </>
                   ) : (
                     <p className="text-slate-300 italic text-xs">배차 시 선택</p>
                   )}
                 </td>
-                {role === 'admin' && (
-                  <td className="px-10 py-8 text-center">
-                    <div className="flex justify-center gap-4 text-slate-300">
-                      <button onClick={() => openEditModal(item)} className="hover:text-blue-600 transition-colors">수정</button>
-                      <button onClick={() => handleDelete(item.id)} className="hover:text-red-400 transition-colors">삭제</button>
+                {isAdmin && (
+                  <td className="px-10 py-8 text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-center gap-4 text-slate-300 font-black">
+                      <button onClick={() => openEditModal(item)} className="hover:text-blue-600 transition-colors font-black">수정</button>
+                      <button onClick={() => handleDelete(item.id)} className="hover:text-red-400 transition-colors font-black">삭제</button>
                     </div>
                   </td>
                 )}
               </tr>
             ))}
+            {currentItems.length === 0 && (
+              <tr>
+                <td colSpan={isAdmin ? 3 : 2} className="p-20 text-center text-slate-300 font-bold italic text-lg">
+                  등록된 {tab} 데이터가 없습니다. 🔍
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+
+        {/* 🔢 페이지네이션 (새로 수리하여 장착!) */}
+        <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50 border-t border-slate-50">
+          <button 
+            disabled={currentPage === 1} 
+            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 
+            className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30"
+          >
+            PREV
+          </button>
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button 
+                key={i+1} 
+                onClick={() => setCurrentPage(i+1)} 
+                className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${
+                  currentPage === i+1 ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'
+                }`}
+              >
+                {i+1}
+              </button>
+            ))}
+          </div>
+          <button 
+            disabled={currentPage === totalPages || totalPages === 0} 
+            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} 
+            className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30"
+          >
+            NEXT
+          </button>
+        </div>
       </div>
 
-      {/* 모달 섹션 - 블루 포인트 적용 */}
+      {/* 모달 섹션 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="bg-white p-12 rounded-[3.5rem] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white p-12 rounded-[3.5rem] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 text-black font-black">
             <h2 className="text-2xl font-black mb-8 text-slate-800 tracking-tight uppercase">
               {editingId ? 'Edit' : 'Add'} <span className="text-blue-600">{tab}</span>
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-4 font-black">
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 ml-4 uppercase tracking-widest">{tab}명</p>
-                <input value={formData.place_name} placeholder="Place Name" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" 
+                <input value={formData.place_name} placeholder="Place Name" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner text-black" 
                   onChange={e => setFormData({...formData, place_name: e.target.value})} />
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 ml-4 uppercase tracking-widest">주소</p>
-                <input value={formData.address} placeholder="Address" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" 
+                <input value={formData.address} placeholder="Address" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner text-black" 
                   onChange={e => setFormData({...formData, address: e.target.value})} />
               </div>
               {tab === '하차지' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-slate-400 ml-4 uppercase tracking-widest">담당자</p>
-                    <input value={formData.manager_name} placeholder="Manager" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" 
+                    <input value={formData.manager_name} placeholder="Manager" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner text-black" 
                       onChange={e => setFormData({...formData, manager_name: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-slate-400 ml-4 uppercase tracking-widest">연락처</p>
-                    <input value={formData.manager_phone} placeholder="Phone" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner" 
+                    <input value={formData.manager_phone} placeholder="Phone" className="w-full p-5 bg-slate-50 rounded-2xl border-none font-bold text-sm shadow-inner text-black" 
                       onChange={e => setFormData({...formData, manager_phone: e.target.value})} />
                   </div>
                 </div>
