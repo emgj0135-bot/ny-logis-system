@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
 export default function DashboardPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 돌리기!
-  const supabase = createClient();
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기! (경고 제거)
+  const [supabase] = useState(() => createClient());
 
   const [counts, setCounts] = useState({
     pallets: 0,
@@ -21,24 +21,27 @@ export default function DashboardPage() {
 
   const fetchCounts = async () => {
     try {
-      // 💡 테이블 이름(pallets, truck_orders 등)이 DB와 일치하는지 꼭 확인해!
+      // 💡 파렛트 미확인 전표 카운트
       const { count: pCount } = await supabase
         .from('pallets')
         .select('*', { count: 'exact', head: true })
         .eq('status', '미확인');
 
+      // 💡 용차 배차 신청완료 카운트
       const { count: tCount } = await supabase
         .from('truck_orders')
         .select('*', { count: 'exact', head: true })
         .eq('status', '신청완료');
 
+      // 💡 미처리 사고접수 카운트
       const { count: aCount } = await supabase
         .from('accidents')
         .select('*', { count: 'exact', head: true })
         .eq('status', '접수완료');
 
+      // 💡 ✨ [오류 수정] payments 테이블 대신 실제 테이블인 'cod_manage'에서 미확인 카운트 긁어오기!
       const { count: payCount } = await supabase
-        .from('payments')
+        .from('cod_manage')
         .select('*', { count: 'exact', head: true })
         .eq('status', '미확인');
 
@@ -100,6 +103,7 @@ export default function DashboardPage() {
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
           <p className="text-[10px] font-black text-blue-400 mb-2 uppercase tracking-widest font-sans">미확인 착불관리</p>
           <div className="flex items-baseline gap-1">
+            {/* 이제 실시간으로 잘 꽂힐 거야! */}
             <span className="text-4xl font-black text-slate-800">{counts.payments}</span>
             <span className="text-sm font-bold text-slate-400 font-sans">건</span>
           </div>
