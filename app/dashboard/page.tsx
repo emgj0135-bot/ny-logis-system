@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-// ✅ 1. supabase 변수 대신 createClient 함수로 가져오기!
+// ✅ 1. 만들어둔 머신 가져오기
 import { createClient } from "@/lib/supabase"; 
 import Link from "next/link";
 
 export default function DashboardPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기! (경고 제거)
+  // ✅ 2. Supabase 머신 안전하게 생성
   const [supabase] = useState(() => createClient());
 
   const [counts, setCounts] = useState({
@@ -21,30 +21,31 @@ export default function DashboardPage() {
 
   const fetchCounts = async () => {
     try {
-      // 💡 파렛트 미확인 전표 카운트
+      // 💡 1. 파렛트 미확인 전표 카운트 (정석 문법으로 교체)
       const { count: pCount } = await supabase
         .from('pallets')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('status', '미확인');
 
-      // 💡 용차 배차 신청완료 카운트
+      // 💡 2. 용차 배차 신청완료 카운트 (정석 문법으로 교체)
       const { count: tCount } = await supabase
         .from('truck_orders')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('status', '신청완료');
 
-      // 💡 미처리 사고접수 카운트
+      // 💡 3. 미처리 사고접수 카운트 (정석 문법으로 교체)
       const { count: aCount } = await supabase
         .from('accidents')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('status', '접수완료');
 
-      // 💡 ✨ [오류 수정] payments 테이블 대신 실제 테이블인 'cod_manage'에서 미확인 카운트 긁어오기!
+      // 💡 4. ✨ 착불관리 미확인 카운트 (정석 문법으로 교체!)
       const { count: payCount } = await supabase
         .from('cod_manage')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('status', '미확인');
 
+      // 최종 스태이트에 안전하게 주입
       setCounts({
         pallets: pCount || 0,
         trucks: tCount || 0,
@@ -103,7 +104,6 @@ export default function DashboardPage() {
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
           <p className="text-[10px] font-black text-blue-400 mb-2 uppercase tracking-widest font-sans">미확인 착불관리</p>
           <div className="flex items-baseline gap-1">
-            {/* 이제 실시간으로 잘 꽂힐 거야! */}
             <span className="text-4xl font-black text-slate-800">{counts.payments}</span>
             <span className="text-sm font-bold text-slate-400 font-sans">건</span>
           </div>
