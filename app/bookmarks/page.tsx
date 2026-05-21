@@ -13,7 +13,7 @@ export default function BookmarkPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // 🔢 페이지네이션용 상태 추가
+  // 🔢 페이지네이션용 상태
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -26,10 +26,9 @@ export default function BookmarkPage() {
 
   useEffect(() => {
     fetchData();
-  }, [tab]); // ✨ 탭이 바뀔 때도 데이터를 다시 갱신하고 페이지를 초기화하기 위함
+  }, [tab]);
 
   const fetchData = async () => {
-    // 🔒 [권한 로직 버그 수정]: user_metadata 대신 profiles 테이블에서 직접 role 가져오기!
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
@@ -46,7 +45,7 @@ export default function BookmarkPage() {
 
     const { data } = await supabase.from('bookmarks').select('*').order('created_at', { ascending: false });
     setBookmarks(data || []);
-    setCurrentPage(1); // 탭 이동이나 새로고침 시 1페이지로 리셋
+    setCurrentPage(1);
   };
 
   const handleSubmit = async () => {
@@ -96,7 +95,6 @@ export default function BookmarkPage() {
     setFormData({ place_name: "", address: "", manager_name: "", manager_phone: "" });
   };
 
-  // 🔢 페이지네이션용 데이터 필터링 및 계산
   const filteredBookmarks = bookmarks.filter(b => b.type === tab);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -146,36 +144,37 @@ export default function BookmarkPage() {
         ))}
       </div>
 
-      {/* 테이블 섹션 */}
+      {/* 테이블 섹션 - ⚡ 간격 콤팩트하게 다듬음! */}
       <div className="overflow-hidden rounded-[2.5rem] border border-slate-100 shadow-sm bg-white text-black font-black">
         <table className="w-full text-sm text-left font-black">
-          <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-black tracking-widest">
+          <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-black tracking-widest text-center">
             <tr>
-              <th className="px-10 py-6">정보</th>
-              <th className="px-10 py-6">담당자</th>
-              {isAdmin && <th className="px-10 py-6 text-center">관리</th>}
+              <th className="px-8 py-4 text-left w-[55%]">정보 (명칭 / 주소)</th>
+              <th className="px-6 py-4 text-left w-[30%]">담당자 정보</th>
+              {isAdmin && <th className="px-6 py-4 text-center w-[15%]">관리</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 font-black">
             {currentItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-10 py-8">
-                  <p className="font-black text-slate-800 text-lg tracking-tight">{item.place_name}</p>
-                  <p className="text-slate-400 text-xs font-bold mt-1 tracking-tight">{item.address}</p>
+                {/* 패딩을 py-8에서 py-4.5로 줄여서 높이를 확 낮춤 */}
+                <td className="px-8 py-4.5">
+                  <p className="font-black text-slate-800 text-base tracking-tight">{item.place_name}</p>
+                  <p className="text-slate-400 text-[11px] font-bold mt-0.5 tracking-tight">{item.address}</p>
                 </td>
-                <td className="px-10 py-8">
+                <td className="px-6 py-4.5">
                   {item.type === '하차지' ? (
-                    <>
-                      <p className="text-slate-700 text-sm font-black">{item.manager_name || "-"}</p>
-                      <p className="text-blue-600 text-xs mt-1 font-black">{item.manager_phone || "-"}</p>
-                    </>
+                    <div>
+                      <p className="text-slate-700 text-xs font-black">{item.manager_name || "-"}</p>
+                      <p className="text-blue-600 text-[11px] mt-0.5 font-black">{item.manager_phone || "-"}</p>
+                    </div>
                   ) : (
                     <p className="text-slate-300 italic text-xs">배차 시 선택</p>
                   )}
                 </td>
                 {isAdmin && (
-                  <td className="px-10 py-8 text-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-center gap-4 text-slate-300 font-black">
+                  <td className="px-6 py-4.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-center gap-3 text-slate-300 font-black text-xs">
                       <button onClick={() => openEditModal(item)} className="hover:text-blue-600 transition-colors font-black">수정</button>
                       <button onClick={() => handleDelete(item.id)} className="hover:text-red-400 transition-colors font-black">삭제</button>
                     </div>
@@ -193,8 +192,8 @@ export default function BookmarkPage() {
           </tbody>
         </table>
 
-        {/* 🔢 페이지네이션 (새로 수리하여 장착!) */}
-        <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50 border-t border-slate-50">
+        {/* 🔢 페이지네이션 */}
+        <div className="flex justify-center items-center gap-2 p-5 bg-slate-50/50 border-t border-slate-50">
           <button 
             disabled={currentPage === 1} 
             onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 
@@ -208,7 +207,7 @@ export default function BookmarkPage() {
                 key={i+1} 
                 onClick={() => setCurrentPage(i+1)} 
                 className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${
-                  currentPage === i+1 ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'
+                  currentPage === i+1 ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100'
                 }`}
               >
                 {i+1}
