@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '../../lib/supabase';
 
 export default function CodPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 돌리기
-  const supabase = createClient();
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기! (무한 생성 및 세션 끊김 방지)
+  const [supabase] = useState(() => createClient());
 
   const [list, setList] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,7 +57,7 @@ export default function CodPage() {
   const downloadExcel = async () => {
     try {
       // @ts-ignore
-      const XLSX = window.XLSX;
+      const XLSX = window.Xpath || window.XXLSX || window.XLSX;
       if (!XLSX) return alert("라이브러리 로딩 중...");
       const { data, error } = await supabase
         .from('cod_manage')
@@ -112,13 +112,15 @@ export default function CodPage() {
     const ids = currentItems.map(i => i.id);
     setSelectedIds(ids.every(id => selectedIds.includes(id)) ? prev => prev.filter(id => !ids.includes(id)) : prev => Array.from(new Set([...prev, ...ids])));
   };
+  
   const handleBulkUpdate = async (targetStatus: '확인됨' | '미확인') => {
     if (selectedIds.length === 0) return alert("항목을 선택해주세요.");
     const { error } = await supabase.from('cod_manage').update({ status: targetStatus, is_confirmed: targetStatus === '확인됨' }).in('id', selectedIds);
-    if (!error) { alert("업데이트 완료!"); fetchCod(); }
+    if (!error) { alert("업데이트 완료! ✨"); fetchCod(); }
   };
 
-  const toggleConfirm = async (id: number, currentConfirmed: boolean) => {
+  const toggleConfirm = async (e: React.MouseEvent, id: number, currentConfirmed: boolean) => {
+    e.stopPropagation(); // ✨ 행 클릭 모달 오픈 버그 방지
     const { error } = await supabase.from('cod_manage').update({ is_confirmed: !currentConfirmed, status: currentConfirmed ? '미확인' : '확인됨' }).eq('id', id);
     if (!error) fetchCod();
   };
@@ -130,8 +132,12 @@ export default function CodPage() {
     if (!error) { alert(isEdit ? "✅ 수정 완료!" : "🚀 등록 완료!"); closeModal(); fetchCod(); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm("삭제하시겠습니까?")) { await supabase.from('cod_manage').delete().eq('id', id); fetchCod(); }
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation(); // ✨ 행 클릭 방지 가드 추가
+    if (confirm("삭제하시겠습니까?")) { 
+      const { error } = await supabase.from('cod_manage').delete().eq('id', id); 
+      if (!error) { alert("삭제 완료! 🗑️"); fetchCod(); }
+    }
   };
 
   const openModal = (item: any = null) => {
@@ -147,7 +153,7 @@ export default function CodPage() {
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
+    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       {/* 🔵 헤더 */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-4">
@@ -185,8 +191,8 @@ export default function CodPage() {
           <button onClick={handleSearch} className="bg-slate-800 text-white px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH 🔍</button>
           <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-6 py-3.5 rounded-2xl font-black text-xs border border-slate-100 mr-auto">RESET</button>
           <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-            <button onClick={() => handleBulkUpdate('확인됨')} className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm">일괄확인 ✅</button>
-            <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-red-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm">일괄미확인 ❌</button>
+            <button onClick={() => handleBulkUpdate('확인됨')} className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-blue-50 transition-colors">일괄확인 ✅</button>
+            <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-red-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-red-50 transition-colors">일괄미확인 ❌</button>
           </div>
         </div>
       </div>
@@ -196,9 +202,9 @@ export default function CodPage() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
-              <th className="p-5 w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600" onChange={handleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} /></th>
+              <th className="p-5 w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" onChange={handleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} /></th>
               <th className="p-5 w-24">상태</th>
-              <th className="p-5 w-32">작성일자</th> {/* ✨ 추가됨 */}
+              <th className="p-5 w-32">작성일자</th>
               <th className="p-5 w-32">구분</th>
               <th className="p-5 text-left">업체 / 반송장 정보</th>
               <th className="p-5 w-32">운임비</th>
@@ -208,14 +214,26 @@ export default function CodPage() {
           <tbody>
             {currentItems.length > 0 ? (
               currentItems.map((item) => (
-                <tr key={item.id} className={`hover:bg-slate-50 border-b transition-colors text-center ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`}>
-                  <td className="p-5"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600" checked={selectedIds.includes(item.id)} onChange={() => handleSelect(item.id)} /></td>
-                  <td className="p-5"><button onClick={() => toggleConfirm(item.id, item.status === '확인됨')} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'}`}>{item.status}</button></td>
-                  <td className="p-5 text-slate-500 text-xs">{item.created_at.split('T')[0]}</td> {/* ✨ 작성일자 데이터 */}
+                <tr key={item.id} className={`hover:bg-slate-50 border-b transition-colors text-center cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`} onClick={() => openModal(item)}>
+                  <td className="p-5" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => handleSelect(item.id)} /></td>
+                  <td className="p-5">
+                    <button onClick={(e) => toggleConfirm(e, item.id, item.status === '확인됨')} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'}`}>
+                      {item.status}
+                    </button>
+                  </td>
+                  <td className="p-5 text-slate-500 text-xs">{item.created_at.split('T')[0]}</td>
                   <td className="p-5 text-[10px]"><span className={`inline-block px-3 py-1 rounded-lg ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'}`}>{item.pay_type}</span></td>
-                  <td className="p-5 text-left" onClick={() => openModal(item)}><p className="text-slate-800 text-base tracking-tight cursor-pointer hover:text-blue-600">{item.customer_name}</p><p className="text-[11px] text-slate-400 mt-1 uppercase font-mono font-normal">{item.delivery_company} | {item.return_invoice}</p></td>
+                  <td className="p-5 text-left">
+                    <p className="text-slate-800 text-base tracking-tight font-black hover:text-blue-600">{item.customer_name}</p>
+                    <p className="text-[11px] text-slate-400 mt-1 uppercase font-mono font-normal">{item.delivery_company} | {item.return_invoice}</p>
+                  </td>
                   <td className="p-5"><p className="text-blue-600 text-lg font-black">{item.fee.toLocaleString()}원</p></td>
-                  <td className="p-5"><div className="flex gap-4 justify-center text-[10px] text-slate-300 uppercase"><button onClick={() => openModal(item)} className="hover:text-blue-600">수정</button><button onClick={() => handleDelete(item.id)} className="hover:text-red-500">삭제</button></div></td>
+                  <td className="p-5" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-4 justify-center text-[10px] text-slate-300 uppercase font-black">
+                      <button onClick={() => openModal(item)} className="hover:text-blue-600">수정</button>
+                      <button onClick={(e) => handleDelete(e, item.id)} className="hover:text-red-500">삭제</button>
+                    </div>
+                  </td>
                 </tr>
               ))
             ) : (
@@ -226,31 +244,13 @@ export default function CodPage() {
 
         {/* 🔢 페이지네이션 복구 */}
         <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
-          <button 
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
-            disabled={currentPage === 1} 
-            className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30"
-          >
-            PREV
-          </button>
+          <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">PREV</button>
           <div className="flex gap-1">
             {Array.from({ length: totalPages }, (_, i) => (
-              <button 
-                key={i+1} 
-                onClick={() => setCurrentPage(i+1)} 
-                className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}
-              >
-                {i+1}
-              </button>
+              <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
             ))}
           </div>
-          <button 
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
-            disabled={currentPage === totalPages || totalPages === 0} 
-            className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30"
-          >
-            NEXT
-          </button>
+          <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">NEXT</button>
         </div>
       </div>
 
