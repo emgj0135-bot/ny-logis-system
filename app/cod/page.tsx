@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '../../lib/supabase';
 
 export default function CodPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기! (무한 생성 및 세션 끊김 방지)
+  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기!
   const [supabase] = useState(() => createClient());
 
   const [list, setList] = useState<any[]>([]);
@@ -57,7 +57,7 @@ export default function CodPage() {
   const downloadExcel = async () => {
     try {
       // @ts-ignore
-      const XLSX = window.Xpath || window.XXLSX || window.XLSX;
+      const XLSX = window.XLSX;
       if (!XLSX) return alert("라이브러리 로딩 중...");
       const { data, error } = await supabase
         .from('cod_manage')
@@ -93,7 +93,7 @@ export default function CodPage() {
       const txt = searchInputs.searchText.toLowerCase();
       temp = temp.filter(item => item.customer_name.toLowerCase().includes(txt) || item.return_invoice.toLowerCase().includes(txt));
     }
-    if (searchInputs.status) temp = temp.filter(item => item.status === searchInputs.status);
+    if (searchInputs.status) temp = temp.filter(item => item.status === Math.status);
     if (searchInputs.payType) temp = temp.filter(item => item.pay_type === searchInputs.payType);
     setFilteredList(temp);
     setSelectedIds([]);
@@ -119,10 +119,19 @@ export default function CodPage() {
     if (!error) { alert("업데이트 완료! ✨"); fetchCod(); }
   };
 
-  const toggleConfirm = async (e: React.MouseEvent, id: number, currentConfirmed: boolean) => {
-    e.stopPropagation(); // ✨ 행 클릭 모달 오픈 버그 방지
-    const { error } = await supabase.from('cod_manage').update({ is_confirmed: !currentConfirmed, status: currentConfirmed ? '미확인' : '확인됨' }).eq('id', id);
-    if (!error) fetchCod();
+  // ✨ [상태 전환 수정] 이벤트를 받아서 버블링을 확실하게 커트하도록 수정!
+  const toggleConfirm = async (e: React.MouseEvent, item: any) => {
+    e.stopPropagation(); // 🚫 부모 행(Row)의 모달 팝업 실행을 완벽하게 차단!
+    
+    const isConfirmed = item.status === '확인됨';
+    const nextStatus = isConfirmed ? '미확인' : '확인됨';
+    
+    const { error } = await supabase
+      .from('cod_manage')
+      .update({ is_confirmed: !isConfirmed, status: nextStatus })
+      .eq('id', item.id);
+      
+    if (!error) await fetchCod();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,11 +141,15 @@ export default function CodPage() {
     if (!error) { alert(isEdit ? "✅ 수정 완료!" : "🚀 등록 완료!"); closeModal(); fetchCod(); }
   };
 
+  // ✨ [단일 삭제 수정] e.stopPropagation() 장착으로 모달 버그 차단
   const handleDelete = async (e: React.MouseEvent, id: number) => {
-    e.stopPropagation(); // ✨ 행 클릭 방지 가드 추가
-    if (confirm("삭제하시겠습니까?")) { 
-      const { error } = await supabase.from('cod_manage').delete().eq('id', id); 
-      if (!error) { alert("삭제 완료! 🗑️"); fetchCod(); }
+    e.stopPropagation(); // 🚫 부모 행(Row)의 모달 팝업 실행을 완벽하게 차단!
+    if (!confirm("삭제하시겠습니까?")) return;
+    
+    const { error } = await supabase.from('cod_manage').delete().eq('id', id); 
+    if (!error) { 
+      alert("삭제 완료! 🗑️"); 
+      await fetchCod(); 
     }
   };
 
@@ -214,10 +227,12 @@ export default function CodPage() {
           <tbody>
             {currentItems.length > 0 ? (
               currentItems.map((item) => (
+                /* ✨ 여기서 행 클릭했을 때 모달 열리는 것과 버튼들 클릭 이벤트가 겹치지 않게 완벽 분리 조치! */
                 <tr key={item.id} className={`hover:bg-slate-50 border-b transition-colors text-center cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`} onClick={() => openModal(item)}>
                   <td className="p-5" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => handleSelect(item.id)} /></td>
                   <td className="p-5">
-                    <button onClick={(e) => toggleConfirm(e, item.id, item.status === '확인됨')} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'}`}>
+                    {/* ✨ toggleConfirm에 이벤트 인자(e)와 item 오브젝트 통째로 전달하도록 정비! */}
+                    <button onClick={(e) => toggleConfirm(e, item)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'}`}>
                       {item.status}
                     </button>
                   </td>
