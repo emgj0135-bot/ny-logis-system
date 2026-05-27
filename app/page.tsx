@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
 export default function MainPage() {
-  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 돌리기
-  const supabase = createClient();
+  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 딱 한 번만 돌리기! (경고 완벽 제거)
+  const [supabase] = useState(() => createClient());
 
   const [counts, setCounts] = useState({
     pallets: 0,
@@ -20,12 +20,12 @@ export default function MainPage() {
   }, []);
 
   const fetchCounts = async () => {
-    // 💡 개별 카운트 함수: 하나가 실패해도 전체가 멈추지 않도록 설계
+    // 💡 개별 카운트 함수: 버그 없는 안전한 정석 문법(id 카운트)으로 전면 교체!
     const getSafeCount = async (tableName: string, statusValue: string) => {
       try {
         const { count, error } = await supabase
           .from(tableName)
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact' }) // ✨ head: true 버그 방지용 정석 문법
           .eq('status', statusValue);
         
         if (error) throw error;
@@ -42,7 +42,7 @@ export default function MainPage() {
         getSafeCount('pallets', '미확인'),
         getSafeCount('truck_orders', '신청완료'),
         getSafeCount('accidents', '접수완료'),
-        getSafeCount('payments', '미확인'),
+        getSafeCount('cod_manage', '미확인'), // ✨ [오류 수정] payments에서 실제 테이블 명인 cod_manage로 전격 교체!
       ]);
 
       const [p, t, a, pay] = results.map(res => res.status === 'fulfilled' ? res.value : 0);
@@ -57,7 +57,7 @@ export default function MainPage() {
       {/* 🔵 상단 헤더 섹션 */}
       <div className="mb-10 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
+          <h1 className="text-3xl font-black italic text-slate-800 tracking-tighter uppercase leading-none">
             NY LOGIS <span className="text-blue-600">대시보드</span>
           </h1>
           <p className="text-sm font-bold text-slate-400 mt-2 uppercase tracking-tight">
@@ -74,10 +74,10 @@ export default function MainPage() {
 
       {/* 📊 상단 실시간 카운트 카드 섹션 */}
       <div className="grid grid-cols-4 gap-6 mb-12">
-        <DashboardCountCard title="파렛트 미확인" count={counts.pallets} color="blue" />
-        <DashboardCountCard title="용차 신청완료" count={counts.trucks} color="orange" />
-        <DashboardCountCard title="미처리 사고" count={counts.accidents} color="red" />
-        <DashboardCountCard title="미확인 착불" count={counts.payments} color="indigo" />
+        <DashboardCountCard title="파렛트 미확인" count={counts.pallets} color="blue" unit="개" />
+        <DashboardCountCard title="용차 신청완료" count={counts.trucks} color="orange" unit="건" />
+        <DashboardCountCard title="미처리 사고" count={counts.accidents} color="red" unit="건" />
+        <DashboardCountCard title="미확인 착불" count={counts.payments} color="indigo" unit="건" />
       </div>
 
       {/* 🚀 하단 메인 메뉴 카드 섹션 (무조건 렌더링) */}
@@ -111,7 +111,7 @@ export default function MainPage() {
 }
 
 // 🎴 카운트 카드 컴포넌트
-function DashboardCountCard({ title, count, color }: { title: string, count: number, color: string }) {
+function DashboardCountCard({ title, count, color, unit }: { title: string, count: number, color: string, unit: string }) {
   const colorMap: any = {
     blue: "group-hover:bg-blue-500 text-blue-500",
     orange: "group-hover:bg-orange-500 text-orange-500",
@@ -124,7 +124,7 @@ function DashboardCountCard({ title, count, color }: { title: string, count: num
       <p className={`text-[10px] font-black mb-3 uppercase tracking-widest font-sans ${colorMap[color].split(' ')[1]}`}>{title}</p>
       <div className="flex items-baseline gap-1">
         <span className="text-5xl font-black text-slate-900 tracking-tighter">{count}</span>
-        <span className="text-sm font-bold text-slate-400">건</span>
+        <span className="text-sm font-bold text-slate-400">{unit}</span>
       </div>
       <div className={`absolute top-0 right-0 w-2 h-full bg-slate-50 transition-all duration-300 ${colorMap[color].split(' ')[0]}`}></div>
     </div>
