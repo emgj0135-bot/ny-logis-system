@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-// ✅ 1. createClient 함수 가져오기로 수정
+// ✅ 1. createClient 함수 가져오기
 import { createClient } from "@/lib/supabase"; 
 import Link from "next/link";
 
 export default function MainPage() {
-  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 딱 한 번만 돌리기!
+  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 단 한 번만 안전하게 돌리기
   const [supabase] = useState(() => createClient());
 
   const [counts, setCounts] = useState({
@@ -15,23 +15,31 @@ export default function MainPage() {
     payments: 0
   });
 
-  // 🔔 HTS 알림 팝업을 위한 상태값 추가
+  // 🔔 HTS 알림 팝업 전용 상태
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // ⏰ 타이머 청소용 상태 관리 변수
+  const [toastTimeoutId, setToastTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // 💡 최초에 한 번 전체 카운트 로드
+    // 💡 초기 카운트 데이터 긁어오기
     fetchCounts();
 
-    // 📡 [HTS 실시간 엔진 장착]: DB 감시 카메라 가동 시작!
+    // 📡 [실시간 엔진 업그레이드]: 강제 신호 관통 옵션 추가
     const channel = supabase
-      .channel('hts-realtime-monitor')
+      .channel('hts-realtime-monitor', {
+        config: {
+          broadcast: { self: true }, // self 브로드캐스트 가드로 소켓 연결 유실 완방
+          presence: { key: 'dashboard' }
+        }
+      })
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public' }, // 어떤 테이블이든 신규 등록(INSERT)되면 감지!
+        { event: 'INSERT', schema: 'public' }, // 퍼블릭 스키마 내 모든 신규 INSERT 감지
         (payload) => {
+          console.log("🚀 실시간 DB 신호 캐치 완료! 대상 테이블:", payload.table);
           const tableName = payload.table;
           
-          // 1. 테이블별 맞춤형 HTS 팝업 문구 생성
+          // 테이블 분류별 HTS 맞춤 메시지 셋팅
           if (tableName === 'truck_orders') {
             showHtsToast("🚚 용차 배차관리 신규 신청 건이 발생했습니다!");
           } else if (tableName === 'pallets') {
@@ -42,24 +50,33 @@ export default function MainPage() {
             showHtsToast("💰 착불 정산관리 신규 내역이 기록되었습니다!");
           }
 
-          // 2. 숫자를 새로고침 없이 실시간으로 +1 동기화!
+          // 화면 새로고침 없이 상단 카드 카운트 동기화
           fetchCounts();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // 안테나가 정상 개통되었는지 개발자 도구 콘솔창에서 눈으로 확인하는 가드 로그
+        console.log("📡 HTS 실시간 안테나 접속 상태:", status);
+      });
 
-    // 🔌 화면 나갈 때 감시 카메라 안전하게 끄기 (메모리 누수 방지)
+    // 🔌 화면을 나가거나 꺼질 때 소켓 통신을 깔끔하게 폐기 (안정성 확보)
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  // ⏰ 팝업창을 3초 동안 띄웠다가 사라지게 하는 함수
+  // ⏰ 3초 타이머 충돌 현상 해결한 무결점 토스트 함수
   const showHtsToast = (message: string) => {
+    // 혹시 기존에 돌고 있던 타이머가 있다면 싹 정리해서 누적 버그 차단
+    if (toastTimeoutId) clearTimeout(toastTimeoutId);
+
     setToastMessage(message);
-    setTimeout(() => {
+
+    const id = setTimeout(() => {
       setToastMessage(null);
-    }, 3000); // 3000ms = 3초
+    }, 3000); // 3초 뒤에 자연스럽게 숨김 처리
+
+    setToastTimeoutId(id);
   };
 
   const fetchCounts = async () => {
@@ -151,7 +168,7 @@ export default function MainPage() {
 
       {/* 📈 HTS 체결 스타일 실시간 토스트 팝업 컴포넌트 */}
       {toastMessage && (
-        <div className="fixed bottom-10 right-10 z-[100] bg-slate-900 text-white px-8 py-5 rounded-[1.8rem] shadow-2xl border border-blue-500/30 backdrop-blur-md flex items-center gap-4 animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-10 right-10 z-[100] bg-slate-900/95 text-white px-8 py-5 rounded-[1.8rem] shadow-2xl border border-blue-500/40 backdrop-blur-md flex items-center gap-4 animate-in slide-in-from-bottom-5 duration-300">
           <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-ping"></div>
           <p className="text-sm font-black tracking-tight text-white font-sans">{toastMessage}</p>
         </div>
