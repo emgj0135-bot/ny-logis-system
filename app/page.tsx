@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
 export default function MainPage() {
-  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 딱 한 번만 돌리기! (경고 완벽 제거)
+  // ✅ 2. 컴포넌트 최상단에서 supabase 머신 딱 한 번만 돌리기!
   const [supabase] = useState(() => createClient());
 
   const [counts, setCounts] = useState({
@@ -15,17 +15,59 @@ export default function MainPage() {
     payments: 0
   });
 
+  // 🔔 HTS 알림 팝업을 위한 상태값 추가
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   useEffect(() => {
+    // 💡 최초에 한 번 전체 카운트 로드
     fetchCounts();
+
+    // 📡 [HTS 실시간 엔진 장착]: DB 감시 카메라 가동 시작!
+    const channel = supabase
+      .channel('hts-realtime-monitor')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public' }, // 어떤 테이블이든 신규 등록(INSERT)되면 감지!
+        (payload) => {
+          const tableName = payload.table;
+          
+          // 1. 테이블별 맞춤형 HTS 팝업 문구 생성
+          if (tableName === 'truck_orders') {
+            showHtsToast("🚚 용차 배차관리 신규 신청 건이 발생했습니다!");
+          } else if (tableName === 'pallets') {
+            showHtsToast("📦 파렛트 전표관리 신규 전표가 등록되었습니다!");
+          } else if (tableName === 'accidents') {
+            showHtsToast("⚠️ 사고 접수센터 신규 사고가 접수되었습니다!");
+          } else if (tableName === 'cod_manage') {
+            showHtsToast("💰 착불 정산관리 신규 내역이 기록되었습니다!");
+          }
+
+          // 2. 숫자를 새로고침 없이 실시간으로 +1 동기화!
+          fetchCounts();
+        }
+      )
+      .subscribe();
+
+    // 🔌 화면 나갈 때 감시 카메라 안전하게 끄기 (메모리 누수 방지)
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
+  // ⏰ 팝업창을 3초 동안 띄웠다가 사라지게 하는 함수
+  const showHtsToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000); // 3000ms = 3초
+  };
+
   const fetchCounts = async () => {
-    // 💡 개별 카운트 함수: 버그 없는 안전한 정석 문법(id 카운트)으로 전면 교체!
     const getSafeCount = async (tableName: string, statusValue: string) => {
       try {
         const { count, error } = await supabase
           .from(tableName)
-          .select('id', { count: 'exact' }) // ✨ head: true 버그 방지용 정석 문법
+          .select('id', { count: 'exact' })
           .eq('status', statusValue);
         
         if (error) throw error;
@@ -37,12 +79,11 @@ export default function MainPage() {
     };
 
     try {
-      // ✨ Promise.allSettled로 비동기 에러 완벽 방어
       const results = await Promise.allSettled([
         getSafeCount('pallets', '미확인'),
         getSafeCount('truck_orders', '신청완료'),
         getSafeCount('accidents', '접수완료'),
-        getSafeCount('cod_manage', '미확인'), // ✨ [오류 수정] payments에서 실제 테이블 명인 cod_manage로 전격 교체!
+        getSafeCount('cod_manage', '미확인'),
       ]);
 
       const [p, t, a, pay] = results.map(res => res.status === 'fulfilled' ? res.value : 0);
@@ -53,7 +94,8 @@ export default function MainPage() {
   };
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans font-black">
+    <div className="p-8 bg-slate-50 min-h-screen font-sans font-black relative overflow-hidden">
+      
       {/* 🔵 상단 헤더 섹션 */}
       <div className="mb-10 flex justify-between items-end">
         <div>
@@ -61,7 +103,7 @@ export default function MainPage() {
             NY LOGIS <span className="text-blue-600">대시보드</span>
           </h1>
           <p className="text-sm font-bold text-slate-400 mt-2 uppercase tracking-tight">
-            천안센터 실시간 업무 현황판 (Partner Mode)
+            천안센터 실시간 업무 현황판 (HTS Real-time Mode)
           </p>
         </div>
         <button 
@@ -80,7 +122,7 @@ export default function MainPage() {
         <DashboardCountCard title="미확인 착불" count={counts.payments} color="indigo" unit="건" />
       </div>
 
-      {/* 🚀 하단 메인 메뉴 카드 섹션 (무조건 렌더링) */}
+      {/* 🚀 하단 메인 메뉴 카드 섹션 */}
       <div className="grid grid-cols-2 gap-8 text-left">
         <Link href="/truck" className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-50 hover:shadow-2xl hover:-translate-y-2 transition-all group">
           <div className="bg-orange-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 group-hover:bg-orange-100 transition-all">🚚</div>
@@ -106,6 +148,14 @@ export default function MainPage() {
           <p className="text-slate-400 font-bold text-sm leading-relaxed">미수금 정산 현황과 업체별 입금 내역을 최종 확인하고 관리합니다.</p>
         </Link>
       </div>
+
+      {/* 📈 HTS 체결 스타일 실시간 토스트 팝업 컴포넌트 */}
+      {toastMessage && (
+        <div className="fixed bottom-10 right-10 z-[100] bg-slate-900 text-white px-8 py-5 rounded-[1.8rem] shadow-2xl border border-blue-500/30 backdrop-blur-md flex items-center gap-4 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-ping"></div>
+          <p className="text-sm font-black tracking-tight text-white font-sans">{toastMessage}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -123,7 +173,7 @@ function DashboardCountCard({ title, count, color, unit }: { title: string, coun
     <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden group transition-all hover:shadow-md">
       <p className={`text-[10px] font-black mb-3 uppercase tracking-widest font-sans ${colorMap[color].split(' ')[1]}`}>{title}</p>
       <div className="flex items-baseline gap-1">
-        <span className="text-5xl font-black text-slate-900 tracking-tighter">{count}</span>
+        <span className="text-5xl font-black text-slate-900 tracking-tighter transition-all duration-300 group-hover:scale-105 inline-block">{count}</span>
         <span className="text-sm font-bold text-slate-400">{unit}</span>
       </div>
       <div className={`absolute top-0 right-0 w-2 h-full bg-slate-50 transition-all duration-300 ${colorMap[color].split(' ')[0]}`}></div>
