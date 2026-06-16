@@ -45,11 +45,12 @@ export default function TruckPage() {
 
   useEffect(() => { 
     fetchData(); 
-    // 👇 엑셀 라이브러리 불러오는 코드
+    // 👇 엑셀 라이브러리 (비동기 병렬 주입 안정화)
     if (!document.getElementById('xlsx-script')) {
       const script = document.createElement('script');
       script.id = 'xlsx-script';
       script.src = "https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js";
+      script.async = true;
       document.head.appendChild(script);
     }
   }, []);
@@ -151,6 +152,44 @@ export default function TruckPage() {
     }
   };
 
+  // 🚀 [비상 수리 완료] 엑셀 다운로드 엔진 완벽 주입!
+  const downloadExcel = async () => {
+    try {
+      const XLSX = (window as any).XLSX;
+      if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
+      
+      const { data, error } = await supabase
+        .from('truck_orders')
+        .select(`*, order_responses(*)`)
+        .gte('loading_date', excelRange.start)
+        .lte('loading_date', excelRange.end)
+        .order('loading_date', { ascending: true });
+        
+      if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
+      
+      const excelData = data.map((item, index) => ({ 
+        "No": index + 1, 
+        "작성일자": item.created_at.split('T')[0], 
+        "상차일자": item.loading_date, 
+        "배차유형": item.order_type, 
+        "상차지": item.loading_place, 
+        "하차지1": item.unloading_place,
+        "하차지2": item.unloading_place_2 || "-",
+        "제품명": item.product_name,
+        "기사명": item.order_responses?.[0]?.driver_name || "미등록",
+        "차량정보": item.order_responses?.[0]?.car_info || "미등록",
+        "운반비": item.order_responses?.[0]?.fee || "0",
+        "상태": item.status 
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "용차배차내역");
+      XLSX.writeFile(workbook, `용차배차_${excelRange.start}_${excelRange.end}.xlsx`);
+      setShowExcelModal(false);
+    } catch (err) { alert("엑셀 생성 오류!"); }
+  };
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
@@ -159,7 +198,7 @@ export default function TruckPage() {
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       
-      {/* 🔵 헤더 영역 (모바일 대응 가변 스케일 정렬) */}
+      {/* 🔵 헤더 영역 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full shadow-lg"></div> 
@@ -174,7 +213,7 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (모바일 뷰 그리드 최적화) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 mb-6 md:mb-8 space-y-4 md:space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-10 text-black">
           <div className="space-y-2">
@@ -208,9 +247,7 @@ export default function TruckPage() {
         </div>
       </div>
 
-      {/* 📋 메인 뷰포트 분기점 처리 */}
-      
-      {/* 1. PC 및 대형 태블릿 뷰 (md 이상 노출) */}
+      {/* 📋 메인 테이블 리스트 (PC 뷰) */}
       <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm font-black">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
@@ -305,7 +342,7 @@ export default function TruckPage() {
         </table>
       </div>
 
-      {/* 2. 모바일 특화 카드형 리스트 (md 미만 폰 화면 최적화 노출 📱) */}
+      {/* 2. 카드형 리스트 (모바일 뷰) */}
       <div className="block md:hidden space-y-4 text-black">
         {currentItems.map((item, index) => {
           const isExpanded = expandedId === item.id;
@@ -313,57 +350,35 @@ export default function TruckPage() {
           const isYasang = item.order_type === "야상배차";
 
           return (
-            <div 
-              key={item.id} 
-              className={`p-4 rounded-xl border bg-white shadow-sm transition-all ${isYasang ? 'border-purple-200 bg-purple-50/20' : 'border-slate-100'}`}
-            >
-              {/* 카드 상단 헤더 태그 셋팅 */}
+            <div key={item.id} className={`p-4 rounded-xl border bg-white shadow-sm transition-all ${isYasang ? 'border-purple-200 bg-purple-50/20' : 'border-slate-100'}`}>
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-blue-600 font-black">#{displayNo}</span>
-                  <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 border'}`}>
-                    {isYasang ? '🌙 야상' : '☀️ 당일'}
-                  </span>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : '☀️ 당일'}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-bold">{item.loading_date}</span>
               </div>
-
-              {/* 메인 루트 텍스트 */}
               <div className="space-y-1" onClick={() => toggleExpand(item.id)}>
-                <p className="text-base font-black tracking-tight text-slate-900">
-                  {isYasang && <span className="text-purple-600 mr-1">🌙</span>}
-                  {item.loading_place} 👉 {item.unloading_place}
-                  {item.unloading_place_2 && <span className="text-blue-500 text-xs block mt-0.5">→ {item.unloading_place_2}</span>}
-                </p>
+                <p className="text-base font-black tracking-tight text-slate-900">{isYasang && <span className="text-purple-600 mr-1">🌙</span>}{item.loading_place} 👉 {item.unloading_place}{item.unloading_place_2 && <span className="text-blue-500 text-xs block mt-0.5">→ {item.unloading_place_2}</span>}</p>
                 <p className="text-xs text-slate-400 font-bold">📦 {item.product_name}</p>
               </div>
-
-              {/* 하단 제어 인터페이스 */}
               <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-slate-100">
-                <button onClick={() => toggleExpand(item.id)} className="text-xs text-slate-500 font-black flex items-center gap-0.5">
-                  {isExpanded ? '상세 닫기 🔼' : '상세 보기 🔽'}
-                </button>
+                <button onClick={() => toggleExpand(item.id)} className="text-xs text-slate-500 font-black flex items-center gap-0.5">{isExpanded ? '상세 닫기 🔼' : '상세 보기 🔽'}</button>
                 <div className="flex gap-2 text-xs">
                   <button onClick={() => { setSelectedOrder(item); setFormData({...item}); setOrderType(item.order_type); setShowOrderModal(true); }} className="text-blue-600 font-black px-2 py-1 bg-blue-50 rounded-md">수정</button>
                   <button onClick={() => handleDelete(item.id)} className="text-red-400 font-black px-2 py-1 bg-red-50 rounded-md">삭제</button>
                 </div>
               </div>
-
-              {/* 모바일 아코디언 확장 카드 영역 */}
               {isExpanded && (
                 <div className="mt-4 pt-3 border-t border-dashed border-slate-200 space-y-4 text-left">
                   <div className="bg-slate-50 p-4 rounded-xl text-xs space-y-2 font-black">
                     <p><span className="text-slate-400">상차지 주소:</span> {item.loading_address}</p>
                     <p><span className="text-slate-400">상차 담당:</span> {item.loading_manager || "-"} / {item.loading_phone || "-"}</p>
                     <p className="border-t border-slate-200 pt-1.5 mt-1.5"><span className="text-slate-400">하차1 담당:</span> {item.unloading_manager || "-"} / {item.unloading_phone || "-"}</p>
-                    {item.unloading_place_2 && (
-                      <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>
-                    )}
+                    {item.unloading_place_2 && <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>}
                     <p className="text-red-500 font-black mt-1">비고: {item.remarks || "없음"}</p>
                   </div>
-
-                  {/* 기사 배차 직접 수기 입력창 패드 고도화 */}
                   <div className="space-y-2 bg-slate-50 p-4 rounded-xl font-black">
                     <p className="text-xs text-blue-600 font-black">🚛 기사 정보 매칭</p>
                     <input placeholder="차량정보 (예: 5톤 윙바디)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black" value={resData.car_info} onChange={e => setResData({...resData, car_info: e.target.value})} />
@@ -384,7 +399,7 @@ export default function TruckPage() {
         })}
       </div>
         
-      {/* 🔢 페이지네이션 (모바일 핑거 프렌들리 스케일업) */}
+      {/* 🔢 페이지네이션 */}
       <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-8 bg-white border-t border-slate-50 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
         <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">PREV</button>
         <div className="flex gap-1">
@@ -395,7 +410,7 @@ export default function TruckPage() {
         <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">NEXT</button>
       </div>
 
-      {/* 📥 엑셀 기간 선택 모달 (정중앙 팝오버 락 가드) */}
+      {/* 📥 엑셀 기간 선택 모달 */}
       {showExcelModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200">
@@ -413,36 +428,19 @@ export default function TruckPage() {
         </div>
       )}
 
-      {/* 🟢 신규/수정 신청 모달 (모바일 전체화면 슬라이딩 업 전환 기법 빌드 📱) */}
+      {/* 🟢 신규/수정 신청 모달 */}
       {showOrderModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end md:p-4 z-50 overflow-hidden font-black">
           <div className="bg-white w-full max-w-2xl h-full md:h-auto md:rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-right duration-300 relative text-black flex flex-col">
-            
-            {/* 닫기 헤더 */}
             <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 md:p-10 pb-4 z-20 flex justify-between items-center border-b border-slate-50">
-              <h2 className="text-xl md:text-3xl font-black uppercase text-slate-900 tracking-tighter leading-none">
-                {selectedOrder ? '배차 수정 💾' : '신규 배차 신청 🚀'}
-              </h2>
+              <h2 className="text-xl md:text-3xl font-black uppercase text-slate-900 tracking-tighter leading-none">{selectedOrder ? '배차 수정 💾' : '신규 배차 신청 🚀'}</h2>
               <button onClick={() => setShowOrderModal(false)} className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all text-sm md:text-xl font-black shadow-sm">✕</button>
             </div>
-
-            {/* 입력 스크롤 시 하단 자판 가림 방지 패딩 확보 */}
             <div className="flex-1 overflow-y-auto p-5 md:p-12 pt-4 space-y-6 md:space-y-8 font-black pb-28 md:pb-12">
               <div className="bg-slate-50 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] shadow-inner space-y-4 font-black">
                 <div className="flex gap-2 bg-white p-1.5 rounded-xl shadow-sm">
                   {['당일배차', '야상배차'].map(t => (
-                    <button 
-                      key={t} 
-                      type="button" 
-                      onClick={() => setOrderType(t)} 
-                      className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${
-                        orderType === t 
-                          ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') 
-                          : 'text-slate-400'
-                      }`}
-                    >
-                      {t === '야상배차' ? '🌙 야상배차' : '☀️ 당일배차'}
-                    </button>
+                    <button key={t} type="button" onClick={() => setOrderType(t)} className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${orderType === t ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-slate-400'}`}>{t === '야상배차' ? '🌙 야상배차' : '☀️ 당일배차'}</button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -450,8 +448,6 @@ export default function TruckPage() {
                    <input type="date" value={formData.unloading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
                 </div>
               </div>
-
-              {/* 📍 상차지 섹션 */}
               <section className="space-y-3 font-black">
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black ml-2">Loading Point (상차지)</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -474,8 +470,6 @@ export default function TruckPage() {
                   <input value={formData.loading_phone} placeholder="상차 담당자 연락처" className="w-full p-3.5 bg-slate-50 rounded-xl border-none text-xs shadow-inner font-bold text-blue-600" onChange={e => setFormData({...formData, loading_phone: e.target.value})} />
                 </div>
               </section>
-
-              {/* 📍 하차지1 섹션 */}
               <section className="space-y-3 p-5 md:p-8 bg-blue-50/50 rounded-2xl md:rounded-[2.5rem] border border-blue-100 shadow-inner font-black">
                 <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black ml-1 italic">Unloading Point 1 (하차지1)</p>
                 <select onChange={e => autoFillUnloading(e.target.value, 1)} className="w-full p-4 bg-white rounded-xl text-xs border-none shadow-sm outline-none font-black text-black">
@@ -490,8 +484,6 @@ export default function TruckPage() {
                 </div>
                 <input value={formData.product_name} placeholder="📦 제품명 및 수량 (하차1)" className="w-full p-4 bg-blue-600 text-white placeholder:text-blue-200 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name: e.target.value})} />
               </section>
-
-              {/* 📍 하차지2 섹션 */}
               <section className="space-y-3 p-5 md:p-8 bg-slate-100/50 rounded-2xl md:rounded-[2.5rem] border border-slate-200 shadow-inner font-black">
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black ml-1 italic">Unloading Point 2 (Optional - 하차지2)</p>
                 <select onChange={e => autoFillUnloading(e.target.value, 2)} className="w-full p-4 bg-white rounded-xl text-xs border-none shadow-sm outline-none font-black text-black">
@@ -506,12 +498,8 @@ export default function TruckPage() {
                 </div>
                 <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-4 bg-slate-800 text-white placeholder:text-slate-400 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: e.target.value})} />
               </section>
-
               <textarea value={formData.remarks} placeholder="📝 기타 비고 (특이사항)" className="w-full p-4 bg-slate-50 rounded-xl border-none text-xs shadow-inner h-28 font-black text-black" onChange={e => setFormData({...formData, remarks: e.target.value})} />
-              
-              <button onClick={handleOrderSubmit} className="w-full p-4 md:p-6 bg-blue-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest">
-                {selectedOrder ? 'Save Changes 💾' : 'Submit Dispatch 🚀'}
-              </button>
+              <button onClick={handleOrderSubmit} className="w-full p-4 md:p-6 bg-blue-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest">{selectedOrder ? 'Save Changes 💾' : 'Submit Dispatch 🚀'}</button>
             </div>
           </div>
         </div>
