@@ -134,7 +134,6 @@ export default function TruckPage() {
     }
   };
 
-  // ✨ 상차지 선택 로직 보완
   const autoFillLoading = (val: string) => {
     const b = bookmarks.find(x => x.place_name === val && x.type === '상차지');
     if(b) {
@@ -142,7 +141,6 @@ export default function TruckPage() {
     }
   };
 
-  // ✨ 하차지 선택 로직 보완 (매니저 이름과 폰번 확실하게 바인딩)
   const autoFillUnloading = (val: string, num: number) => {
     const b = bookmarks.find(x => x.place_name === val && x.type === '하차지');
     if(b) {
@@ -255,6 +253,7 @@ export default function TruckPage() {
             <tr>
               <th className="p-5 w-16">No</th>
               <th className="p-5 w-32">작성일자</th>
+              <th className="p-5 w-28">유형</th> {/* 👈 유형 컬럼 확보 */}
               <th className="p-5 text-left">배차 정보 (상차지 👉 하차지)</th>
               <th className="p-5 w-32">상차일자</th>
               <th className="p-5 w-24">상태</th>
@@ -265,13 +264,35 @@ export default function TruckPage() {
             {currentItems.map((item, index) => {
               const isExpanded = expandedId === item.id;
               const displayNo = filteredList.length - (indexOfFirstItem + index);
+              const isYasang = item.order_type === "야상배차"; // 👈 야상배차 체크 변수
+
               return (
                 <React.Fragment key={item.id}>
-                  <tr onClick={() => toggleExpand(item.id)} className="cursor-pointer hover:bg-slate-50 border-b transition-colors text-center">
+                  {/* 🚀 야상배차일 때 배경색을 아주 연한 보라/네이비 톤(bg-indigo-50/40)으로 변경하여 가독성 업! */}
+                  <tr 
+                    onClick={() => toggleExpand(item.id)} 
+                    className={`cursor-pointer hover:bg-slate-100/80 border-b transition-colors text-center ${isYasang ? 'bg-indigo-50/40' : ''}`}
+                  >
                     <td className="p-5 text-blue-600">{displayNo}</td>
                     <td className="p-5 text-slate-400 text-xs font-bold">{item.created_at.split('T')[0]}</td>
+                    
+                    {/* 🚀 유형 뱃지 스타일 차별화 (야상배차는 보라색 테마 🌙) */}
+                    <td className="p-5">
+                      <span className={`text-[10px] px-3 py-1.5 rounded-xl font-black block text-center shadow-sm whitespace-nowrap ${
+                        isYasang 
+                          ? 'bg-purple-600 text-white' 
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        {isYasang ? '🌙 야상' : '☀️ 당일'}
+                      </span>
+                    </td>
+
                     <td className="p-5 text-left">
-                      <p className="text-slate-800 text-base tracking-tight font-black">{item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}</p>
+                      {/* 🚀 야상배차 문구 앞에도 밤하늘 달 아이콘 장착 */}
+                      <p className="text-slate-800 text-base tracking-tight font-black">
+                        {isYasang && <span className="text-purple-600 mr-1">🌙</span>}
+                        {item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}
+                      </p>
                       <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-bold">📦 {item.product_name} {item.product_name_2 && `| ${item.product_name_2}`}</p>
                     </td>
                     <td className="p-5 text-slate-800 text-xs font-black">{item.loading_date}</td>
@@ -287,12 +308,13 @@ export default function TruckPage() {
                   </tr>
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={6} className="p-8">
+                      <td colSpan={7} className="p-8"> {/* colSpan 7로 증가 */}
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
                             <div className="grid grid-cols-2 gap-8 text-black text-left font-black">
                               <div className="space-y-4">
                                  <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">📍 Loading & Unloading Info</p>
                                  <div className="bg-slate-50 p-6 rounded-3xl text-xs space-y-2 font-black">
+                                    <p><span className="text-slate-400">배차유형:</span> <span className={isYasang ? "text-purple-600 font-black" : "text-slate-800 font-black"}>{item.order_type} {isYasang && '🌙'}</span></p>
                                     <p><span className="text-slate-400">상차지:</span> {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
                                     <p><span className="text-slate-400">주소:</span> {item.loading_address}</p>
                                     <p className="border-t border-slate-200 my-2 pt-2"><span className="text-slate-400">하차지1:</span> {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
@@ -381,9 +403,21 @@ export default function TruckPage() {
             {/* 스크롤 가능한 본문 영역 */}
             <div className="flex-1 overflow-y-auto p-12 pt-5 space-y-8 font-black">
               <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4 font-black">
+                {/* 🚀 신규 등록 모달창 내부 선택 버튼 스타일도 매칭 (야상배차 선택 시 보라색 테마) */}
                 <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm">
                   {['당일배차', '야상배차'].map(t => (
-                    <button key={t} type="button" onClick={() => setOrderType(t)} className={`flex-1 py-3 rounded-xl text-xs transition-all font-black ${orderType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}>{t}</button>
+                    <button 
+                      key={t} 
+                      type="button" 
+                      onClick={() => setOrderType(t)} 
+                      className={`flex-1 py-3 rounded-xl text-xs transition-all font-black ${
+                        orderType === t 
+                          ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') 
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {t === '야상배차' ? '🌙 야상배차' : '☀️ 당일배차'}
+                    </button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -411,7 +445,6 @@ export default function TruckPage() {
                 <input value={formData.loading_place} placeholder="상차지 명칭" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner font-black text-black" onChange={e => setFormData({...formData, loading_place: e.target.value})} />
                 <input value={formData.loading_address} placeholder="상차지 주소" className="w-full p-5 bg-slate-50 rounded-2xl border-none text-sm shadow-inner font-black text-black" onChange={e => setFormData({...formData, loading_address: e.target.value})} />
                 
-                {/* 📞 상차 담당자 연락처 노출 인풋 추가 */}
                 <div className="grid grid-cols-2 gap-3">
                   <input value={formData.loading_manager} placeholder="상차 담당자명" className="w-full p-4 bg-slate-50 rounded-2xl border-none text-xs shadow-inner font-bold text-black" onChange={e => setFormData({...formData, loading_manager: e.target.value})} />
                   <input value={formData.loading_phone} placeholder="상차 담당자 연락처" className="w-full p-4 bg-slate-50 rounded-2xl border-none text-xs shadow-inner font-bold text-blue-600" onChange={e => setFormData({...formData, loading_phone: e.target.value})} />
@@ -428,7 +461,6 @@ export default function TruckPage() {
                 <input value={formData.unloading_place} placeholder="하차지1 명칭" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black" onChange={e => setFormData({...formData, unloading_place: e.target.value})} />
                 <input value={formData.unloading_address} placeholder="하차지1 주소" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black" onChange={e => setFormData({...formData, unloading_address: e.target.value})} />
                 
-                {/* 📞 하차지1 담당자 연락처 인풋 화면에 확실하게 노출 바인딩! */}
                 <div className="grid grid-cols-2 gap-3">
                   <input value={formData.unloading_manager} placeholder="하차지1 담당자" className="w-full p-4 bg-white rounded-2xl border-none text-xs shadow-sm font-bold text-black" onChange={e => setFormData({...formData, unloading_manager: e.target.value})} />
                   <input value={formData.unloading_phone} placeholder="하차지1 연락처" className="w-full p-4 bg-white rounded-2xl border-none text-xs shadow-sm font-bold text-blue-600" onChange={e => setFormData({...formData, unloading_phone: e.target.value})} />
@@ -446,7 +478,6 @@ export default function TruckPage() {
                 <input value={formData.unloading_place_2} placeholder="하차지2 명칭" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black" onChange={e => setFormData({...formData, unloading_place_2: e.target.value})} />
                 <input value={formData.unloading_address_2} placeholder="하차지2 주소" className="w-full p-5 bg-white rounded-2xl border-none text-sm shadow-sm font-black text-black" onChange={e => setFormData({...formData, unloading_address_2: e.target.value})} />
                 
-                {/* 📞 하차지2 담당자 연락처 인풋 화면에 확실하게 노출 바인딩! */}
                 <div className="grid grid-cols-2 gap-3">
                   <input value={formData.unloading_manager_2} placeholder="하차지2 담당자" className="w-full p-4 bg-white rounded-2xl border-none text-xs shadow-sm font-bold text-black" onChange={e => setFormData({...formData, unloading_manager_2: e.target.value})} />
                   <input value={formData.unloading_phone_2} placeholder="하차지2 연락처" className="w-full p-4 bg-white rounded-2xl border-none text-xs shadow-sm font-bold text-blue-600" onChange={e => setFormData({...formData, unloading_phone_2: e.target.value})} />
