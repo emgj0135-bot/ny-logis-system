@@ -50,7 +50,7 @@ export default function PalletsPage() {
     if (!error) {
       setList(data || []);
       setFilteredList(data || []);
-      setSelectedIds([]); // ✨ 데이터 새로 불러오면 체크박스 초기화
+      setSelectedIds([]); 
     }
   };
 
@@ -82,7 +82,7 @@ export default function PalletsPage() {
     if (!error) await fetchData();
   };
 
-  // 🚀 일괄 상태 업데이트 (새로 추가됨!)
+  // 🚀 일괄 상태 업데이트
   const handleBulkUpdate = async (targetStatus: '확인완료' | '미확인') => {
     if (selectedIds.length === 0) return alert("변경할 항목을 먼저 선택해주세요 👆");
     const { error } = await supabase.from('pallets').update({ status: targetStatus }).in('id', selectedIds);
@@ -92,7 +92,7 @@ export default function PalletsPage() {
     }
   };
 
-  // 🗑️ 일괄 삭제 (새로 추가됨!)
+  // 🗑️ 일괄 삭제
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해주세요 👆");
     if (!confirm(`정말 선택한 ${selectedIds.length}개의 전표를 싹 지우시겠습니까? 💣`)) return;
@@ -128,7 +128,7 @@ export default function PalletsPage() {
     } else {
       const { error } = await supabase.from('pallets').insert([{ ...payload, status: '미확인' }]);
       if (error) alert("등록 실패: " + error.message);
-      else { alert("등록 성공! 🚀"); closeModal(); await fetchData(); setCurrentPage(1); }
+      else { alert("등록 성공! 🚀"); closeModal(); await fetchData(); await fetchData(); setCurrentPage(1); }
     }
   };
 
@@ -186,175 +186,261 @@ export default function PalletsPage() {
   };
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
+      
+      {/* 🔵 상단 타이틀 바 (모바일 스케일 스퀴즈 대응) */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">파렛트 <span className="text-blue-600">전표</span></h1>
-            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase text-blue-600/60">NY 로지스 천안센터 전표 관리</p>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">파렛트 <span className="text-blue-600">전표</span></h1>
+            <p className="text-slate-400 font-bold mt-1.5 md:mt-2 tracking-tight text-[10px] md:text-xs uppercase text-blue-600/60">NY 로지스 천안센터 전표 관리</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all text-sm">📊 엑셀 다운로드</button>
-          <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-all text-sm">+ 신규 전표 등록</button>
-        </div>
-      </div>
-
-      {/* 🔍 검색 필터 및 일괄 처리 버튼 영역 */}
-      <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6">
-        <div className="flex flex-wrap gap-10">
-          <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">작성일자</p>
-            <div className="flex items-center gap-3">
-              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
-              <span className="text-slate-300">~</span>
-              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">발행일</p>
-            <div className="flex items-center gap-3">
-              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_start} onChange={e => setFilters({...filters, issue_start: e.target.value})} />
-              <span className="text-slate-300">~</span>
-              <input type="date" className="p-3 bg-slate-50 rounded-xl border-none text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-3 pt-4 border-t border-slate-50 items-center">
-          <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
-            <option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인완료">확인완료</option>
-          </select>
-          <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px]">
-            <option value="">구분 전체</option><option value="출고">출고만 보기</option><option value="입고">입고만 보기</option>
-          </select>
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-10 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">검색 🔍</button>
-          
-          {/* 👇 mr-auto를 줘서 오른쪽 버튼들을 끝으로 밀어냄 */}
-          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-8 py-3.5 rounded-2xl font-black text-xs border border-slate-100 mr-auto">리셋</button>
-          
-          {/* ✨ 일괄 처리 버튼 3종 세트 추가! */}
-          <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-            <button onClick={() => handleBulkUpdate('확인완료')} className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-blue-50 transition-colors">일괄확인 ✅</button>
-            <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-orange-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-orange-50 transition-colors">일괄미확인 ❌</button>
-            <button onClick={handleBulkDelete} className="bg-white text-red-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-red-50 transition-colors">일괄삭제 🗑️</button>
-          </div>
+        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+          <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-4 md:px-7 py-3 rounded-xl md:rounded-2xl font-black shadow-md hover:bg-green-700 transition-all text-xs md:text-sm text-center">📊 엑셀 다운로드</button>
+          <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-4 md:px-7 py-3 rounded-xl md:rounded-2xl font-black shadow-md hover:bg-blue-700 transition-all text-xs md:text-sm text-center">+ 신규 전표 등록</button>
         </div>
       </div>
 
-      {/* 테이블 */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-[11px]">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 text-slate-400 font-bold border-b uppercase tracking-widest text-[10px]">
-              <tr>
-                <th className="p-6 text-center w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
-                <th className="p-6 text-left">상태</th>
-                <th className="p-6 text-left">작성일자</th>
-                <th className="p-6 text-center">구분</th> 
-                <th className="p-6 text-left">발행일 / 업체명</th>
-                <th className="p-6 text-left font-black text-blue-600">KPP/AJ</th>
-                <th className="p-6 text-left text-slate-400 font-black">비고</th>
-                <th className="p-6 text-center">관리</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 font-black">
-              {currentItems.map((item) => (
-                <tr key={item.id} className={`hover:bg-slate-50 transition-all cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`} onClick={() => openEditModal(item)}>
-                  <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
-                  <td className="p-6">
-                    <button onClick={(e) => handleStatusUpdate(e, item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 animate-pulse' : 'bg-green-50 text-green-500'}`}>{item.status}</button>
-                  </td>
-                  <td className="p-6 text-slate-400 text-[10px] whitespace-nowrap">{formatDate(item.created_at)}</td>
-                  <td className="p-6 text-center"><span className={`inline-block px-3 py-1 rounded-lg text-[10px] ${item.type === '출고' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{item.type}</span></td>
-                  <td className="p-6 whitespace-nowrap font-black"><div>{item.issue_date}</div><div className="text-slate-400 text-[10px] tracking-tighter">{item.company_name}</div></td>
-                  <td className="p-6 whitespace-nowrap">
-                    <div className="text-blue-600">{item.kpp_n11_count}/{item.kpp_n12_count}</div>
-                    <div className="text-green-600">{item.aj_11a_count}/{item.aj_12a_count}</div>
-                  </td>
-                  <td className="p-6 text-slate-400 font-normal max-w-[120px] truncate">{item.remarks || "-"}</td>
-                  <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-4 justify-center text-slate-300">
-                      <button onClick={() => openEditModal(item)} className="hover:text-blue-500">수정</button>
-                      <button onClick={(e) => handleDelete(e, item.id)} className="hover:text-red-500 text-red-400/60">삭제</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {currentItems.length === 0 && (
-                <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
-              )}
-            </tbody>
-          </table>
+      {/* 🔍 검색 필터 및 일괄 처리 패널 (모바일 맞춤형 축소) */}
+      <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 mb-6 md:mb-8 space-y-4 md:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-10 text-black">
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-widest">작성일자</p>
+            <div className="flex items-center gap-2">
+              <input type="date" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl text-xs font-bold outline-none" value={filters.created_start} onChange={e => setFilters({...filters, created_start: e.target.value})} />
+              <span className="text-slate-300">~</span>
+              <input type="date" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl text-xs font-bold outline-none" value={filters.created_end} onChange={e => setFilters({...filters, created_end: e.target.value})} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-widest">발행일</p>
+            <div className="flex items-center gap-2">
+              <input type="date" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl text-xs font-bold outline-none" value={filters.issue_start} onChange={e => setFilters({...filters, issue_start: e.target.value})} />
+              <span className="text-slate-300">~</span>
+              <input type="date" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl text-xs font-bold outline-none" value={filters.issue_end} onChange={e => setFilters({...filters, issue_end: e.target.value})} />
+            </div>
+          </div>
         </div>
         
-        {/* 페이지네이션 */}
-        <div className="flex justify-center items-center gap-2 p-6 bg-slate-50/50">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">PREV</button>
-          <div className="flex gap-1">
-            {[...Array(totalPages)].map((_, i) => (
-              <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-8 h-8 rounded-xl text-[10px] font-black ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
-            ))}
+        {/* 필터 제어 하단 라인 (모바일에서 일괄처리 버튼 3종을 가로 스크롤 패널로 보완 🔥) */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:items-center pt-2 md:pt-4 border-t border-slate-50">
+          <div className="grid grid-cols-2 sm:flex gap-2">
+            <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3 bg-slate-100 rounded-xl text-xs font-black text-slate-600 outline-none">
+              <option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인완료">확인완료</option>
+            </select>
+            <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="p-3 bg-slate-100 rounded-xl text-xs font-black text-slate-600 outline-none">
+              <option value="">구분 전체</option><option value="출고">출고만</option><option value="입고">입고만</option>
+            </select>
           </div>
-          <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-blue-600 disabled:opacity-30">NEXT</button>
+          
+          <div className="flex gap-2">
+            <button onClick={handleSearch} className="flex-1 lg:flex-none bg-slate-800 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-black transition-all">검색 🔍</button>
+            <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-5 py-3 rounded-xl font-black text-xs border border-slate-100">리셋</button>
+          </div>
+          
+          {/* 일괄 제어 컴포넌트 셋 (모바일 전용 터치 마진 최적화) */}
+          <div className="overflow-x-auto pb-1 lg:pb-0 lg:ml-auto custom-scrollbar shrink-0">
+            <div className="flex gap-1.5 bg-slate-100 p-1.5 rounded-xl w-max">
+              <button onClick={() => handleBulkUpdate('확인완료')} className="bg-white text-blue-600 px-3 py-2 rounded-lg text-[10px] font-black shadow-sm whitespace-nowrap">일괄확인 ✅</button>
+              <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-orange-500 px-3 py-2 rounded-lg text-[10px] font-black shadow-sm whitespace-nowrap">일괄미확인 ❌</button>
+              <button onClick={handleBulkDelete} className="bg-white text-red-500 px-3 py-2 rounded-lg text-[10px] font-black shadow-sm whitespace-nowrap">일괄삭제 🗑️</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 엑셀 모달 */}
+      {/* 📋 메인 데이터 목록 분기 가드 */}
+
+      {/* 1. PC 뷰포트 테이블 (md 이상 활성화) */}
+      <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-[11px] text-black">
+        <table className="w-full">
+          <thead className="bg-slate-50 text-slate-400 font-bold border-b uppercase tracking-widest text-[10px]">
+            <tr>
+              <th className="p-6 text-center w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
+              <th className="p-6 text-left">상태</th>
+              <th className="p-6 text-left">작성일자</th>
+              <th className="p-6 text-center">구분</th> 
+              <th className="p-6 text-left">발행일 / 업체명</th>
+              <th className="p-6 text-left font-black text-blue-600">KPP/AJ</th>
+              <th className="p-6 text-left text-slate-400 font-black">비고</th>
+              <th className="p-6 text-center">관리</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50 font-black">
+            {currentItems.map((item) => (
+              <tr key={item.id} className={`hover:bg-slate-50 transition-all cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`} onClick={() => openEditModal(item)}>
+                <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => toggleSelect(item.id)} /></td>
+                <td className="p-6">
+                  <button onClick={(e) => handleStatusUpdate(e, item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 animate-pulse' : 'bg-green-50 text-green-500'}`}>{item.status}</button>
+                </td>
+                <td className="p-6 text-slate-400 text-[10px] whitespace-nowrap">{formatDate(item.created_at)}</td>
+                <td className="p-6 text-center"><span className={`inline-block px-3 py-1 rounded-lg text-[10px] ${item.type === '출고' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{item.type}</span></td>
+                <td className="p-6 whitespace-nowrap font-black"><div>{item.issue_date}</div><div className="text-slate-400 text-[10px] tracking-tighter">{item.company_name}</div></td>
+                <td className="p-6 whitespace-nowrap">
+                  <div className="text-blue-600">KPP: {item.kpp_n11_count}/{item.kpp_n12_count}</div>
+                  <div className="text-green-600">AJ: {item.aj_11a_count}/{item.aj_12a_count}</div>
+                </td>
+                <td className="p-6 text-slate-400 font-normal max-w-[120px] truncate">{item.remarks || "-"}</td>
+                <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex gap-4 justify-center text-slate-300 text-xs">
+                    <button onClick={() => openEditModal(item)} className="hover:text-blue-500 font-black">수정</button>
+                    <button onClick={(e) => handleDelete(e, item.id)} className="hover:text-red-500 text-red-400">삭제</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {currentItems.length === 0 && (
+              <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 2. 모바일 특화 자산형 카드 리스트 (md 미만 자동 연출 📱) */}
+      <div className="block md:hidden space-y-4 text-black font-black">
+        
+        {/* 전체 선택 체크 마스터 한 줄바형 구성 */}
+        {currentItems.length > 0 && (
+          <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-400">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" checked={currentItems.length > 0 && currentItems.every(id => selectedIds.includes(id.id))} onChange={toggleSelectAll} />
+              <span>현재 페이지 전표 전체선택</span>
+            </label>
+            <span>{selectedIds.length}개 선택됨</span>
+          </div>
+        )}
+
+        {currentItems.map((item) => {
+          const isChecked = selectedIds.includes(item.id);
+          return (
+            <div key={item.id} className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 transition-all ${isChecked ? 'border-blue-300 bg-blue-50/10' : 'border-slate-100'}`}>
+              
+              {/* 카드 상단 헤더줄 */}
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" checked={isChecked} onChange={() => toggleSelect(item.id)} />
+                  <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${item.type === '출고' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{item.type}</span>
+                  <button onClick={(e) => handleStatusUpdate(e, item.id, item.status)} className={`px-2.5 py-0.5 rounded-full text-[9px] font-black ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 animate-pulse' : 'bg-green-50 text-green-500'}`}>{item.status}</button>
+                </div>
+                <span className="text-[9px] text-slate-400">{item.issue_date} 발행</span>
+              </div>
+
+              {/* 본문 터치영역 (클릭 시 모달 팝업 가이드) */}
+              <div className="space-y-2 text-left" onClick={() => openEditModal(item)}>
+                <div>
+                  <p className="text-base font-black text-slate-900 tracking-tight">{item.company_name}</p>
+                  <p className="text-[10px] text-slate-400 font-normal">등록: {formatDate(item.created_at)}</p>
+                </div>
+
+                {/* 파렛트 입출고 자산 랙 스케일 박스 */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs font-bold">
+                  <div className="border-r border-slate-200 pr-2">
+                    <p className="text-[10px] text-blue-600 font-black mb-0.5">KPP 파렛트</p>
+                    <p className="text-slate-700">N11: <span className="text-slate-900 font-black">{item.kpp_n11_count}</span>개</p>
+                    <p className="text-slate-700">N12: <span className="text-slate-900 font-black">{item.kpp_n12_count}</span>개</p>
+                  </div>
+                  <div className="pl-2">
+                    <p className="text-[10px] text-green-600 font-black mb-0.5">AJ 파렛트</p>
+                    <p className="text-slate-700">11A: <span className="text-slate-900 font-black">{item.aj_11a_count}</span>개</p>
+                    <p className="text-slate-700">12A: <span className="text-slate-900 font-black">{item.aj_12a_count}</span>개</p>
+                  </div>
+                </div>
+
+                {item.remarks && <p className="text-xs text-slate-400 font-normal truncate">💬 비고: {item.remarks}</p>}
+              </div>
+
+              {/* 하단 단일 관리 버튼 */}
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-50 text-xs">
+                <button onClick={() => openEditModal(item)} className="text-blue-600 font-black">수정</button>
+                <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">삭제</button>
+              </div>
+            </div>
+          );
+        })}
+
+        {currentItems.length === 0 && (
+          <div className="p-16 bg-white rounded-xl text-center text-slate-300 italic">데이터가 없습니다. 🔍</div>
+        )}
+      </div>
+        
+      {/* 🔢 페이지네이션 (모바일 스케일 조정) */}
+      <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-6 bg-white border-t border-slate-100 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-2 text-xs font-black text-slate-400 disabled:opacity-30">PREV</button>
+        <div className="flex gap-1">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-8 h-8 md:w-10 md:h-10 rounded-xl text-xs transition-all font-black ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
+          ))}
+        </div>
+        <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-2 text-xs font-black text-slate-400 disabled:opacity-30">NEXT</button>
+      </div>
+
+      {/* 📥 엑셀 모달 */}
       {showExcelModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[60]">
-            <div className="bg-white p-8 rounded-[2rem] w-full max-w-xs shadow-2xl font-black">
-                <h2 className="text-lg mb-4 uppercase">Excel Download</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center p-4 z-[60]">
+            <div className="bg-white p-6 md:p-8 rounded-2xl w-full max-w-xs shadow-2xl font-black">
+                <h2 className="text-base md:text-lg mb-4 uppercase text-slate-800">Excel Download</h2>
                 <div className="space-y-4">
-                    <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-black text-sm" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
-                    <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-black text-sm" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
-                    <button onClick={downloadExcel} className="w-full bg-green-600 text-white p-4 rounded-xl text-xs font-black">엑셀 다운로드 🚀</button>
-                    <button onClick={() => setShowExcelModal(false)} className="w-full text-slate-400 text-xs py-2 font-black">취소</button>
+                    <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-black text-xs" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
+                    <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-black text-xs" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
+                    <button onClick={downloadExcel} className="w-full bg-green-600 text-white p-3.5 rounded-xl text-xs font-black shadow-md">엑셀 다운로드 🚀</button>
+                    <button onClick={() => setShowExcelModal(false)} className="w-full text-slate-400 text-xs py-1 font-black">취소</button>
                 </div>
             </div>
         </div>
       )}
 
-      {/* 신규/수정 모달 */}
+      {/* 🟢 신규/수정 모달 (모바일 스키니 스크롤 대응 인풋 패킷 강화 📱) */}
       {showModal && (
-        <div className="fixed inset-0 bg-[#1a1c2e]/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 overflow-y-auto max-h-[90vh] font-black">
-            <h2 className="text-xl font-black mb-6 text-slate-800 tracking-tighter uppercase">{isEdit ? '전표 수정 💾' : '신규 전표 등록 🚀'}</h2>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl">
+        <div className="fixed inset-0 bg-[#1a1c2e]/70 backdrop-blur-md flex justify-center items-center p-3 md:p-4 z-50">
+          <div className="bg-white w-full max-w-xl rounded-2xl md:rounded-[2.5rem] shadow-2xl p-5 md:p-10 overflow-y-auto max-h-[92vh] font-black text-black">
+            <h2 className="text-lg md:text-xl font-black mb-4 md:mb-6 text-slate-800 tracking-tighter uppercase">{isEdit ? '전표 수정 💾' : '신규 전표 등록 🚀'}</h2>
+            
+            <div className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex gap-1.5 bg-slate-50 p-1 rounded-xl shadow-inner">
                   {['출고', '입고'].map(t => (
-                    <button key={t} onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
+                    <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2 rounded-lg font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
                   ))}
                 </div>
-                <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none text-blue-600 shadow-inner" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
+                <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none text-blue-600 shadow-inner" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
               </div>
-              <input placeholder="업체명 (필수)" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm outline-none shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
               
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-1 space-y-3">
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-blue-600 w-12 text-center uppercase">N11</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-sm outline-none w-full text-right" value={formData.kpp_n11_count} onChange={e => setFormData({...formData, kpp_n11_count: e.target.value})} /></div>
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-blue-600 w-12 text-center uppercase">N12</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-sm outline-none w-full text-right" value={formData.kpp_n12_count} onChange={e => setFormData({...formData, kpp_n12_count: e.target.value})} /></div>
+              <input placeholder="업체명 (필수)" className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
+              
+              {/* KPP 세션 */}
+              <div className="space-y-1.5">
+                <p className="text-[9px] text-blue-500 tracking-wider font-black ml-1 uppercase">KPP Pallet Config</p>
+                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-1 space-y-2">
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2.5 px-3 shadow-inner"><span className="text-[10px] font-black text-blue-600 w-10 text-center uppercase">N11</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-xs outline-none w-full text-right text-black" value={formData.kpp_n11_count} onChange={e => setFormData({...formData, kpp_n11_count: e.target.value})} /></div>
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2.5 px-3 shadow-inner"><span className="text-[10px] font-black text-blue-600 w-10 text-center uppercase">N12</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-xs outline-none w-full text-right text-black" value={formData.kpp_n12_count} onChange={e => setFormData({...formData, kpp_n12_count: e.target.value})} /></div>
+                  </div>
+                  <textarea placeholder="KPP 전표번호 입력" className="sm:col-span-2 p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner resize-none h-20 sm:h-full text-black" value={formData.kpp_number} onChange={e => setFormData({...formData, kpp_number: e.target.value})} />
                 </div>
-                <textarea placeholder="KPP 전표번호 입력" className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full" value={formData.kpp_number} onChange={e => setFormData({...formData, kpp_number: e.target.value})} />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-1 space-y-3">
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-green-600 w-12 text-center uppercase">11A</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-sm outline-none w-full text-right" value={formData.aj_11a_count} onChange={e => setFormData({...formData, aj_11a_count: e.target.value})} /></div>
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 px-4 shadow-inner"><span className="text-[10px] font-black text-green-600 w-12 text-center uppercase">12A</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-sm outline-none w-full text-right" value={formData.aj_12a_count} onChange={e => setFormData({...formData, aj_12a_count: e.target.value})} /></div>
+              {/* AJ 세션 */}
+              <div className="space-y-1.5">
+                <p className="text-[9px] text-green-600 tracking-wider font-black ml-1 uppercase">AJ Pallet Config</p>
+                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-1 space-y-2">
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2.5 px-3 shadow-inner"><span className="text-[10px] font-black text-green-600 w-10 text-center uppercase">11A</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-xs outline-none w-full text-right text-black" value={formData.aj_11a_count} onChange={e => setFormData({...formData, aj_11a_count: e.target.value})} /></div>
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2.5 px-3 shadow-inner"><span className="text-[10px] font-black text-green-600 w-10 text-center uppercase">12A</span><input type="number" placeholder="0" className="bg-transparent border-none font-bold text-xs outline-none w-full text-right text-black" value={formData.aj_12a_count} onChange={e => setFormData({...formData, aj_12a_count: e.target.value})} /></div>
+                  </div>
+                  <textarea placeholder="AJ 전표번호 입력" className="sm:col-span-2 p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner resize-none h-20 sm:h-full text-black" value={formData.aj_name} onChange={e => setFormData({...formData, aj_name: e.target.value})} />
                 </div>
-                <textarea placeholder="AJ 전표번호 입력" className="col-span-2 p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-full" value={formData.aj_name} onChange={e => setFormData({...formData, aj_name: e.target.value})} />
               </div>
 
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">REMARKS (비고)</p>
-                <textarea placeholder="메모 입력..." className="w-full p-4 bg-slate-100 rounded-2xl border-none font-bold text-xs outline-none shadow-inner resize-none h-24" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} />
+              <div className="space-y-1.5">
+                <p className="text-[9px] text-slate-400 uppercase ml-1 tracking-widest">REMARKS (비고)</p>
+                <textarea placeholder="메모 입력..." className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner resize-none h-20" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} />
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-slate-50">
-                <button onClick={handleSubmit} className="flex-1 bg-blue-600 text-white p-5 rounded-[1.5rem] font-black shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest">{isEdit ? 'Save Changes' : 'Create Record'}</button>
-                <button onClick={closeModal} className="bg-slate-100 text-slate-400 px-8 rounded-[1.5rem] font-black uppercase text-xs">Close</button>
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <button onClick={handleSubmit} className="flex-1 bg-blue-600 text-white p-4 rounded-xl font-black shadow-md hover:bg-blue-700 transition-all uppercase tracking-widest text-xs">{isEdit ? 'Save Changes' : 'Create Record'}</button>
+                <button onClick={closeModal} className="bg-slate-100 text-slate-400 px-6 rounded-xl font-black uppercase text-xs">Close</button>
               </div>
             </div>
           </div>
