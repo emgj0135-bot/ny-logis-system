@@ -93,7 +93,8 @@ export default function CodPage() {
       const txt = searchInputs.searchText.toLowerCase();
       temp = temp.filter(item => item.customer_name.toLowerCase().includes(txt) || item.return_invoice.toLowerCase().includes(txt));
     }
-    if (searchInputs.status) temp = temp.filter(item => item.status === Math.status);
+    // 🛠️ [냉정 수리 완료] Math.status 오타 완전 박살내고 searchInputs.status로 정상화!
+    if (searchInputs.status) temp = temp.filter(item => item.status === searchInputs.status);
     if (searchInputs.payType) temp = temp.filter(item => item.pay_type === searchInputs.payType);
     setFilteredList(temp);
     setSelectedIds([]);
@@ -119,10 +120,8 @@ export default function CodPage() {
     if (!error) { alert("업데이트 완료! ✨"); fetchCod(); }
   };
 
-  // ✨ [상태 전환 수정] 이벤트를 받아서 버블링을 확실하게 커트하도록 수정!
   const toggleConfirm = async (e: React.MouseEvent, item: any) => {
-    e.stopPropagation(); // 🚫 부모 행(Row)의 모달 팝업 실행을 완벽하게 차단!
-    
+    e.stopPropagation(); 
     const isConfirmed = item.status === '확인됨';
     const nextStatus = isConfirmed ? '미확인' : '확인됨';
     
@@ -141,9 +140,8 @@ export default function CodPage() {
     if (!error) { alert(isEdit ? "✅ 수정 완료!" : "🚀 등록 완료!"); closeModal(); fetchCod(); }
   };
 
-  // ✨ [단일 삭제 수정] e.stopPropagation() 장착으로 모달 버그 차단
   const handleDelete = async (e: React.MouseEvent, id: number) => {
-    e.stopPropagation(); // 🚫 부모 행(Row)의 모달 팝업 실행을 완벽하게 차단!
+    e.stopPropagation(); 
     if (!confirm("삭제하시겠습니까?")) return;
     
     const { error } = await supabase.from('cod_manage').delete().eq('id', id); 
@@ -166,52 +164,62 @@ export default function CodPage() {
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
-      {/* 🔵 헤더 */}
-      <div className="flex justify-between items-center mb-10">
+    <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
+      
+      {/* 🔵 헤더 영역 (반응형 최적화) */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full shadow-lg shadow-blue-100"></div> 
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">착불 <span className="text-blue-600">관리</span></h1>
-            <p className="text-slate-400 font-bold mt-2 tracking-tight text-xs uppercase text-blue-600/60">천안센터 착불 정산 시스템</p>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">착불 <span className="text-blue-600">관리</span></h1>
+            <p className="text-slate-400 font-bold mt-1.5 md:mt-2 tracking-tight text-[10px] md:text-xs uppercase text-blue-600/60">천안센터 착불 정산 시스템</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-green-100 hover:bg-green-700 transition-all text-sm">📊 엑셀 다운로드</button>
-          <button onClick={() => openModal()} className="bg-blue-600 text-white px-7 py-3.5 rounded-2xl font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm">+ 신규 데이터 등록</button>
+        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+          <button onClick={() => setShowExcelModal(true)} className="bg-green-600 text-white px-4 md:px-7 py-3 rounded-xl md:rounded-2xl font-black shadow-md text-xs md:text-sm text-center">📊 엑셀 다운로드</button>
+          <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 md:px-7 py-3 rounded-xl md:rounded-2xl font-black shadow-md text-xs md:text-sm text-center">+ 신규 데이터 등록</button>
         </div>
       </div>
 
-      {/* 🔍 검색 필터 */}
-      <div className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 mb-8 space-y-6 font-black">
-        <div className="flex flex-wrap gap-10">
-          <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Created Date</p>
-            <div className="flex items-center gap-3 font-bold">
-              <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs" value={searchInputs.startDate} onChange={e => setSearchInputs({...searchInputs, startDate: e.target.value})} />
+      {/* 🔍 검색 필터 (모바일 분기 처리 최적화) */}
+      <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 mb-6 md:mb-8 space-y-4 md:space-y-6 font-black">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-10 text-black">
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-widest">Created Date</p>
+            <div className="flex items-center gap-2 font-bold">
+              <input type="date" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl outline-none text-xs" value={searchInputs.startDate} onChange={e => setSearchInputs({...searchInputs, startDate: e.target.value})} />
               <span className="text-slate-300">~</span>
-              <input type="date" className="p-3 bg-slate-50 rounded-xl outline-none text-xs" value={searchInputs.endDate} onChange={e => setSearchInputs({...searchInputs, endDate: e.target.value})} />
+              <input type="date" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl outline-none text-xs" value={searchInputs.endDate} onChange={e => setSearchInputs({...searchInputs, endDate: e.target.value})} />
             </div>
           </div>
-          <div className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Search Info</p>
-            <input type="text" placeholder="업체명 또는 반송장번호" className="p-3 bg-slate-50 rounded-xl outline-none text-xs w-64 font-bold" value={searchInputs.searchText} onChange={e => setSearchInputs({...searchInputs, searchText: e.target.value})} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-widest">Search Info</p>
+            <input type="text" placeholder="업체명 또는 반송장번호" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl outline-none text-xs sm:w-64 font-bold" value={searchInputs.searchText} onChange={e => setSearchInputs({...searchInputs, searchText: e.target.value})} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
           </div>
         </div>
-        <div className="flex gap-3 pt-4 border-t border-slate-50 items-center">
-          <select className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px] outline-none" value={searchInputs.payType} onChange={e => setSearchInputs({...searchInputs, payType: e.target.value})}><option value="">구분 전체</option><option value="정산입금">정산입금</option><option value="업체입금">업체입금</option></select>
-          <select className="p-3.5 bg-slate-100 rounded-2xl border-none text-xs font-black text-slate-600 min-w-[120px] outline-none" value={searchInputs.status} onChange={e => setSearchInputs({...searchInputs, status: e.target.value})}><option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인됨">확인됨</option></select>
-          <button onClick={handleSearch} className="bg-slate-800 text-white px-8 py-3.5 rounded-2xl font-black text-xs hover:bg-black transition-all">SEARCH 🔍</button>
-          <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-6 py-3.5 rounded-2xl font-black text-xs border border-slate-100 mr-auto">RESET</button>
-          <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-            <button onClick={() => handleBulkUpdate('확인됨')} className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-blue-50 transition-colors">일괄확인 ✅</button>
-            <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-red-500 px-4 py-2 rounded-xl text-xs font-black shadow-sm hover:bg-red-50 transition-colors">일괄미확인 ❌</button>
+        
+        <div className="flex flex-col sm:flex-row gap-3 pt-2 md:pt-4 border-t border-slate-50 items-start sm:items-center">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <select className="p-3 bg-slate-100 rounded-xl border-none text-xs font-black text-slate-600 outline-none" value={searchInputs.payType} onChange={e => setSearchInputs({...searchInputs, payType: e.target.value})}><option value="">구분 전체</option><option value="정산입금">정산입금</option><option value="업체입금">업체입금</option></select>
+            <select className="p-3 bg-slate-100 rounded-xl border-none text-xs font-black text-slate-600 outline-none" value={searchInputs.status} onChange={e => setSearchInputs({...searchInputs, status: e.target.value})}><option value="">상태 전체</option><option value="미확인">미확인</option><option value="확인됨">확인됨</option></select>
+          </div>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button onClick={handleSearch} className="flex-1 sm:flex-none bg-slate-800 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-black transition-all">SEARCH 🔍</button>
+            <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-5 py-3 rounded-xl font-black text-xs border border-slate-100">RESET</button>
+          </div>
+          
+          <div className="w-full sm:w-auto sm:ml-auto flex gap-1.5 bg-slate-100 p-1.5 rounded-xl justify-center shrink-0">
+            <button onClick={() => handleBulkUpdate('확인됨')} className="bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm">일괄확인 ✅</button>
+            <button onClick={() => handleBulkUpdate('미확인')} className="bg-white text-red-500 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm">일괄미확인 ❌</button>
           </div>
         </div>
       </div>
 
-      {/* 📋 메인 테이블 */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
+      {/* 📋 메인 정산 목록 분기 기법 */}
+
+      {/* 1. PC 및 대형 태블릿 (md 이상 와이드 테이블 노출) */}
+      <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
@@ -227,22 +235,20 @@ export default function CodPage() {
           <tbody>
             {currentItems.length > 0 ? (
               currentItems.map((item) => (
-                /* ✨ 여기서 행 클릭했을 때 모달 열리는 것과 버튼들 클릭 이벤트가 겹치지 않게 완벽 분리 조치! */
                 <tr key={item.id} className={`hover:bg-slate-50 border-b transition-colors text-center cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''}`} onClick={() => openModal(item)}>
                   <td className="p-5" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={selectedIds.includes(item.id)} onChange={() => handleSelect(item.id)} /></td>
                   <td className="p-5">
-                    {/* ✨ toggleConfirm에 이벤트 인자(e)와 item 오브젝트 통째로 전달하도록 정비! */}
                     <button onClick={(e) => toggleConfirm(e, item)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap transition-all ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'}`}>
                       {item.status}
                     </button>
                   </td>
                   <td className="p-5 text-slate-500 text-xs">{item.created_at.split('T')[0]}</td>
-                  <td className="p-5 text-[10px]"><span className={`inline-block px-3 py-1 rounded-lg ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'}`}>{item.pay_type}</span></td>
+                  <td className="p-5 text-center text-[10px]"><span className={`inline-block px-3 py-1 rounded-lg ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'}`}>{item.pay_type}</span></td>
                   <td className="p-5 text-left">
                     <p className="text-slate-800 text-base tracking-tight font-black hover:text-blue-600">{item.customer_name}</p>
                     <p className="text-[11px] text-slate-400 mt-1 uppercase font-mono font-normal">{item.delivery_company} | {item.return_invoice}</p>
                   </td>
-                  <td className="p-5"><p className="text-blue-600 text-lg font-black">{item.fee.toLocaleString()}원</p></td>
+                  <td className="p-5 text-center"><p className="text-blue-600 text-lg font-black">{item.fee.toLocaleString()}원</p></td>
                   <td className="p-5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-4 justify-center text-[10px] text-slate-300 uppercase font-black">
                       <button onClick={() => openModal(item)} className="hover:text-blue-600">수정</button>
@@ -256,69 +262,139 @@ export default function CodPage() {
             )}
           </tbody>
         </table>
-
-        {/* 🔢 페이지네이션 복구 */}
-        <div className="flex justify-center items-center gap-2 p-8 bg-white border-t border-slate-50 font-black">
-          <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">PREV</button>
-          <div className="flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-10 h-10 rounded-xl text-xs transition-all ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
-            ))}
-          </div>
-          <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs disabled:opacity-30">NEXT</button>
-        </div>
       </div>
 
-      {/* 📥 엑셀 기간 선택 모달 */}
+      {/* 2. 모바일 특화 착불 대시형 카드 리스트 (md 미만 스마트폰 최적화 📱) */}
+      <div className="block md:hidden space-y-4 text-black font-black">
+        {currentItems.length > 0 && (
+          <div className="flex items-center gap-2 px-1 text-xs text-slate-400">
+            <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" onChange={handleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} />
+            <span>정산 전표 전체 선택 ({selectedIds.length}개 선택)</span>
+          </div>
+        )}
+
+        {currentItems.map((item) => {
+          const isSelected = selectedIds.includes(item.id);
+          return (
+            <div key={item.id} className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 transition-all ${isSelected ? 'border-blue-300 bg-blue-50/10' : 'border-slate-100'}`}>
+              
+              {/* 상단 메타 영역 */}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" checked={isSelected} onChange={() => handleSelect(item.id)} />
+                  <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border' : 'bg-purple-50 text-purple-600 border'}`}>{item.pay_type}</span>
+                  <button onClick={(e) => toggleConfirm(e, item)} className={`px-2.5 py-0.5 rounded-full text-[9px] font-black ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border animate-pulse'}`}>{item.status}</button>
+                </div>
+                <span className="text-[10px] text-slate-400">{item.created_at.split('T')[0]}</span>
+              </div>
+
+              {/* 정산 본문 정보 팩 */}
+              <div className="space-y-1.5 text-left" onClick={() => openModal(item)}>
+                <div>
+                  <p className="text-base font-black text-slate-900 tracking-tight">{item.customer_name}</p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{item.delivery_company} 👉 {item.return_invoice}</p>
+                </div>
+                
+                <div className="flex justify-between items-baseline bg-slate-50 p-2.5 rounded-lg mt-1">
+                  <span className="text-[11px] text-slate-400 font-bold">대행 운임 청구비</span>
+                  <span className="text-base font-black text-blue-600">{item.fee.toLocaleString()}원</span>
+                </div>
+              </div>
+
+              {/* 하단 개별 스위치 패널 */}
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-50 text-xs">
+                <button onClick={() => openModal(item)} className="text-blue-600 font-black">내역수정</button>
+                <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">삭제</button>
+              </div>
+            </div>
+          );
+        })}
+
+        {currentItems.length === 0 && (
+          <div className="p-16 bg-white rounded-xl text-center text-slate-300 italic">데이터가 없습니다. 🔍</div>
+        )}
+      </div>
+        
+      {/* 🔢 페이지네이션 (가변 스케일 매칭) */}
+      <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-8 bg-white border-t border-slate-50 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
+        <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">PREV</button>
+        <div className="flex gap-1">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-8 h-8 md:w-10 md:h-10 rounded-xl text-xs transition-all font-black ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>{i+1}</button>
+          ))}
+        </div>
+        <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">NEXT</button>
+      </div>
+
+      {/* 📥 엑셀 모달 */}
       {showExcelModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60]">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-black mb-2 text-slate-800 tracking-tight uppercase">Excel Download</h2>
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200">
+            <h2 className="text-base md:text-lg font-black mb-2 text-slate-800 tracking-tight uppercase">Excel Download</h2>
             <p className="text-slate-400 text-xs font-bold mb-6">다운로드할 작성일자 기간을 선택하세요.</p>
             <div className="space-y-4 font-black">
-              <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
-              <input type="date" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-blue-600 shadow-inner" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
-              <div className="flex gap-3 pt-4">
-                <button onClick={downloadExcel} className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs hover:bg-green-700 shadow-lg shadow-green-50">엑셀 생성 및 저장</button>
-                <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-6 rounded-2xl font-black text-xs">취소</button>
+              <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-blue-600 shadow-inner text-xs font-bold" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
+              <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-blue-600 shadow-inner text-xs font-bold" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
+              <div className="flex gap-3 pt-2">
+                <button onClick={downloadExcel} className="flex-1 bg-green-600 text-white p-3.5 rounded-xl font-black text-xs hover:bg-green-700 shadow-md">엑셀 생성</button>
+                <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-4 rounded-xl font-black text-xs">취소</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 📋 등록/수정 모달 */}
+      {/* 📋 등록/수정 모달 (하단 키보드 자판 가림 대응 슬라이드 마진 패딩 고도화 📱) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end p-4 z-50">
-          <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-12 overflow-y-auto animate-in slide-in-from-right relative text-black">
-             <button onClick={closeModal} className="absolute top-10 right-10 text-slate-300 font-black text-2xl">✕</button>
-             <h2 className="text-3xl font-black mb-8 uppercase text-slate-900 tracking-tighter">착불 <span className="text-blue-600">데이터 기록</span></h2>
-             <form onSubmit={handleSubmit} className="space-y-6 font-black text-black">
-                <div className="bg-slate-50 p-6 rounded-[2.5rem] shadow-inner space-y-4">
-                  <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm">
-                    {['정산입금', '업체입금'].map(t => (
-                      <button key={t} type="button" onClick={() => setFormData({...formData, pay_type: t})} className={`flex-1 py-3 rounded-xl text-xs transition-all ${formData.pay_type === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}>{t}</button>
-                    ))}
+        <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end md:p-4 z-50 overflow-hidden">
+          <div className="bg-white w-full max-w-2xl h-full md:h-auto md:rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-right duration-300 relative text-black flex flex-col font-black">
+             
+             <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 md:p-10 pb-4 z-20 flex justify-between items-center border-b border-slate-50 font-black">
+               <h2 className="text-xl md:text-3xl font-black uppercase text-slate-900 tracking-tighter leading-none">착불 <span className="text-blue-600">데이터 기록</span></h2>
+               <button onClick={closeModal} className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-sm md:text-xl font-black shadow-sm">✕</button>
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-5 md:p-12 pt-4 pb-28 md:pb-12">
+               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 font-black text-black">
+                  <div className="bg-slate-50 p-4 rounded-xl shadow-inner space-y-4">
+                    <div className="flex gap-2 bg-white p-1.5 rounded-xl shadow-sm">
+                      {['정산입금', '업체입금'].map(t => (
+                        <button key={t} type="button" onClick={() => setFormData({...formData, pay_type: t})} className={`flex-1 py-2.5 rounded-lg text-xs transition-all font-black ${formData.pay_type === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}>{t}</button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Customer Name</p>
-                  <input required type="text" placeholder="업체명" value={formData.customer_name} className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none shadow-inner" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Carrier</p>
-                  <input required type="text" placeholder="택배사" value={formData.delivery_company} className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none shadow-inner" onChange={e => setFormData({...formData, delivery_company: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 ml-4 uppercase">Return Invoice</p>
-                  <input required type="text" placeholder="반송장번호" value={formData.return_invoice} className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none shadow-inner font-mono" onChange={e => setFormData({...formData, return_invoice: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 ml-4 mb-1 text-right uppercase tracking-widest">Amount (KRW)</p>
-                  <input required type="number" placeholder="운임비" value={formData.fee} className="w-full p-6 bg-slate-50 rounded-2xl text-right font-black text-blue-600 text-3xl border-none shadow-inner" onChange={e => setFormData({...formData, fee: parseInt(e.target.value) || 0})} />
-                </div>
-                <button type="submit" className="w-full mt-6 p-6 bg-slate-900 text-white rounded-[2.5rem] text-xl font-black shadow-xl hover:bg-black transition-all uppercase tracking-widest">등록 완료 🚀</button>
-             </form>
+                  
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Customer Name</p>
+                    <input required type="text" placeholder="업체명 기입" value={formData.customer_name} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Carrier</p>
+                      <input required type="text" placeholder="택배사 (예: CJ대한통운)" value={formData.delivery_company} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, delivery_company: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Return Invoice</p>
+                      <input required type="text" placeholder="반송장번호 입력" value={formData.return_invoice} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold font-mono text-black" onChange={e => setFormData({...formData, return_invoice: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Memo (Remarks)</p>
+                    <input type="text" placeholder="특이사항 메모 기록" value={formData.memo || ''} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, memo: e.target.value})} />
+                  </div>
+
+                  <div className="space-y-1 pt-2">
+                    <p className="text-[9px] text-red-500 ml-2 mb-1 text-right uppercase tracking-widest font-black">Amount (KRW)</p>
+                    <input required type="number" placeholder="0" value={formData.fee} className="w-full p-4 md:p-6 bg-slate-50 rounded-xl text-right font-black text-blue-600 text-2xl md:text-3xl border-none shadow-inner" onChange={e => setFormData({...formData, fee: parseInt(e.target.value) || 0})} />
+                  </div>
+                  
+                  <button type="submit" className="w-full mt-4 p-4 md:p-6 bg-slate-900 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-black transition-all uppercase tracking-widest">
+                    {editingItem ? '수정 완료 💾' : '등록 완료 🚀'}
+                  </button>
+               </form>
+             </div>
           </div>
         </div>
       )}
