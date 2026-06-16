@@ -164,7 +164,7 @@ export default function AccidentPage() {
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       
-      {/* 🔵 헤더 영역 (반응형 대응 가변 조절) */}
+      {/* 🔵 헤더 영역 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-red-600 rounded-full shadow-lg"></div> 
@@ -179,7 +179,7 @@ export default function AccidentPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (모바일 통합 랙 방지) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 mb-6 md:mb-8 space-y-4 md:space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-10 text-black">
           <div className="space-y-2">
@@ -216,7 +216,7 @@ export default function AccidentPage() {
             <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-5 py-3 rounded-xl text-xs border border-slate-100 font-black">리셋</button>
           </div>
           
-          {/* 일괄 삭제 패널 (모바일 우측 하단 정렬 보정) */}
+          {/* 일괄 삭제 패널 */}
           <div className="w-full sm:w-auto sm:ml-auto bg-slate-100 p-1.5 rounded-xl text-center shrink-0">
             <button onClick={handleBulkDelete} className="w-full sm:w-auto bg-white text-red-500 px-4 py-2 rounded-lg text-xs font-black shadow-sm whitespace-nowrap">선택 항목 일괄 삭제 🗑️</button>
           </div>
@@ -281,8 +281,6 @@ export default function AccidentPage() {
 
       {/* 2. 모바일 특화 와이드 뷰 카드형 리스트 (md 미만 활성화 📱) */}
       <div className="block md:hidden space-y-4 text-black font-black">
-        
-        {/* 모바일 체크 마스터 가이드 바 */}
         {currentItems.length > 0 && (
           <div className="flex items-center gap-2 px-1 text-xs text-slate-400">
             <input type="checkbox" className="w-4 h-4 rounded accent-red-600" onChange={toggleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} />
@@ -299,7 +297,6 @@ export default function AccidentPage() {
               key={item.id} 
               className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 transition-all ${isSelected ? 'border-red-300 bg-red-50/10' : 'border-slate-100'}`}
             >
-              {/* 상단 뱃지 슬롯 라인 */}
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" className="w-4 h-4 rounded accent-red-600" checked={isSelected} onChange={() => toggleSelect(item.id)} />
@@ -310,7 +307,6 @@ export default function AccidentPage() {
                 <span className="text-[10px] text-slate-400">{item.created_at.split('T')[0]}</span>
               </div>
 
-              {/* 본문 송장 클레임 패킷 */}
               <div className="space-y-1.5 text-left" onClick={() => openModal(item)}>
                 <div>
                   <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">송장번호</p>
@@ -341,7 +337,6 @@ export default function AccidentPage() {
                 )}
               </div>
 
-              {/* 하단 단일 제어 스위치 */}
               <div className="flex justify-end gap-3 pt-2.5 border-t border-slate-50 text-xs">
                 <button onClick={() => openModal(item)} className="text-blue-600 font-black">상세수정</button>
                 <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">기록삭제</button>
@@ -351,9 +346,8 @@ export default function AccidentPage() {
         })}
       </div>
 
-      {/* 리셋 디스플레이 가드 */}
       {currentItems.length === 0 && (
-        <div className="p-20 bg-white rounded-2xl text-center text-slate-300 italic font-bold">데이터가 없습니다. 🔍</div>
+        <div className="p-16 bg-white rounded-xl text-center text-slate-300 italic">데이터가 없습니다. 🔍</div>
       )}
         
       {/* 🔢 페이지네이션 */}
@@ -385,7 +379,7 @@ export default function AccidentPage() {
         </div>
       )}
 
-      {/* 📋 등록/수정 모달 (우측 슬라이딩 및 패드 락 가드 개조) */}
+      {/* 📋 등록/수정 모달 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end md:p-4 z-50 overflow-hidden">
           <div className="bg-white w-full max-w-2xl h-full md:h-auto md:rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-right duration-300 relative text-black flex flex-col font-black">
@@ -396,6 +390,7 @@ export default function AccidentPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 md:p-12 pt-4 pb-24 md:pb-12">
+              {/* ✅ 오타 전면 수리: </header> 오폭을 지우고 진짜 <form> 태그 가동! */}
               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 font-black">
                 <div className="bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-[2.5rem] shadow-inner space-y-4 font-black">
                   <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 font-black">
@@ -447,7 +442,7 @@ export default function AccidentPage() {
                 <button type="submit" className="w-full mt-6 p-4 md:p-6 bg-red-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest font-black">
                   {editingItem ? '수정완료 💾' : '등록완료 🚀'}
                 </button>
-              </header>
+              </form>
             </div>
           </div>
         </div>
