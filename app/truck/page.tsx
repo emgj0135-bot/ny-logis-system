@@ -1,8 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
+// ✅ 1. 여기서 만들어둔 머신(createClient)을 가져오고!
 import { createClient } from "@/lib/supabase"; 
 
 export default function TruckPage() {
+  // ✅ 2. 컴포넌트 안에서 직접 supabase를 뽑아 쓴다! (경고 없애기 위해 useState 사용!)
   const [supabase] = useState(() => createClient());
 
   // --- 상태 관리 ---
@@ -43,6 +45,7 @@ export default function TruckPage() {
 
   useEffect(() => { 
     fetchData(); 
+    // 👇 엑셀 라이브러리 (비동기 병렬 주입 안정화)
     if (!document.getElementById('xlsx-script')) {
       const script = document.createElement('script');
       script.id = 'xlsx-script';
@@ -68,6 +71,7 @@ export default function TruckPage() {
     }
   };
 
+  // ✨ 야상배차 클릭 시 하차일자 자동으로 다음 날로 바꿔주는 스마트 체인저 함수
   const handleOrderTypeChange = (type: string, currentLoadingDate: string) => {
     setOrderType(type);
     if (type === '야상배차' && currentLoadingDate) {
@@ -80,6 +84,7 @@ export default function TruckPage() {
     }
   };
 
+  // 🚀 배차 신청/수정 로직
   const handleOrderSubmit = async () => {
     if (!formData.loading_place || !formData.unloading_place) return alert("필수 정보를 입력해주세요.");
     
@@ -95,15 +100,15 @@ export default function TruckPage() {
     }
   };
 
+  // 🗑️ 삭제 로직
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from('truck_orders').delete().eq('id', id);
     if (!error) await fetchData();
   };
 
-  // ✅ 배차 정보 저장 로직 완성본 (업체 정보 업데이트 + 카톡 자동 복사 연동)
-  const handleResponseSubmit = async (orderItem: any) => {
-    const orderId = orderItem.id;
+  // ✅ [버튼 분리 1]: 오직 데이터베이스 저장만 담당하는 깔끔한 저장 함수
+  const handleResponseSubmit = async (orderId: number) => {
     try {
       const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
       
@@ -122,18 +127,23 @@ export default function TruckPage() {
         }]);
       }
       
-      // 메인 상태값도 같이 동기화 업데이트
       await supabase.from('truck_orders').update({ status: resData.status }).eq('id', orderId);
-
-      // 카톡 포맷 클립보드 자동 생성 엔진
-      const copyText = `[NY 로지스 배차 확정 안내]\n\n• 상차지: ${orderItem.loading_place}\n• 하차지: ${orderItem.unloading_place}${orderItem.unloading_place_2 ? ` -> ${orderItem.unloading_place_2}` : ''}\n• 배차유형: ${orderItem.order_type}\n• 차량정보: ${resData.car_info || "미등록"}\n• 기사명/연락처: ${resData.driver_name || "미등록"}\n• 운반비: ${resData.fee || "0"}원\n• 진행상태: ${resData.status}`;
-      
-      await navigator.clipboard.writeText(copyText);
-      alert("배차 정보가 정상적으로 저장되었습니다! ✅\n\n💡 업체 전달용 알림 카톡 텍스트가 자동으로 복사되었으니 바로 Ctrl+V 하세요!");
-      
+      alert("배차 정보가 정상적으로 저장되었습니다! ✅");
       await fetchData();
     } catch (err) {
-      alert("저장 중 오류가 발생했어. 다시 시도해줘!");
+      alert("저장 중 오류가 발생했습니다. 다시 시도해 주세요!");
+    }
+  };
+
+  // 📋 [버튼 분리 2]: 저장과 별개로 카톡 전송 양식만 클립보드로 쏙 복사해 주는 함수
+  const handleCopyToClipboard = async (orderItem: any) => {
+    const copyText = `[NY 로지스 배차 확정 안내]\n\n• 상차지: ${orderItem.loading_place}\n• 하차지: ${orderItem.unloading_place}${orderItem.unloading_place_2 ? ` -> ${orderItem.unloading_place_2}` : ''}\n• 배차유형: ${orderItem.order_type}\n• 차량정보: ${resData.car_info || "미등록"}\n• 기사명/연락처: ${resData.driver_name || "미등록"}\n• 운반비: ${resData.fee || "0"}원\n• 진행상태: ${resData.status}`;
+    
+    try {
+      await navigator.clipboard.writeText(copyText);
+      alert("📋 카톡 전송용 배차 안내 텍스트가 복사되었습니다!\n원하는 카톡방에 Ctrl+V로 붙여넣으세요.");
+    } catch (err) {
+      alert("클립보드 복사에 실패했습니다. 기기 권한을 확인해 주세요.");
     }
   };
 
@@ -222,11 +232,6 @@ export default function TruckPage() {
     } catch (err) { alert("엑셀 생성 오류!"); }
   };
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
-
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       
@@ -294,9 +299,9 @@ export default function TruckPage() {
             </tr>
           </thead>
           <tbody>
-            {currentItems.map((item, index) => {
+            {filteredList.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage).map((item, index) => {
               const isExpanded = expandedId === item.id;
-              const displayNo = filteredList.length - (indexOfFirstItem + index);
+              const displayNo = filteredList.length - (((currentPage - 1) * itemsPerPage) + index);
               const isYasang = item.order_type === "야상배차";
               const isOlive = item.order_type === "올리브영";
 
@@ -363,7 +368,10 @@ export default function TruckPage() {
                                        <option value="신청완료">신청완료</option>
                                        <option value="배차완료">배차완료</option>
                                     </select>
-                                    <button onClick={() => handleResponseSubmit(item)} className="col-span-2 py-4 bg-blue-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-blue-700 transition-all">배차 업데이트 및 카톡 자동복사 📋</button>
+                                    
+                                    {/* ✨ [PC 버전 버튼 완전 분리 완료]: 나란히 가로 배치 */}
+                                    <button onClick={() => handleResponseSubmit(item.id)} className="py-4 bg-blue-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-blue-700 transition-all">배차 정보 저장 💾</button>
+                                    <button onClick={() => handleCopyToClipboard(item)} className="py-4 bg-green-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-green-700 transition-all">카톡 양식 복사 📋</button>
                                  </div>
                               </div>
                             </div>
@@ -382,7 +390,7 @@ export default function TruckPage() {
       <div className="block md:hidden space-y-4 text-black">
         {currentItems.map((item, index) => {
           const isExpanded = expandedId === item.id;
-          const displayNo = filteredList.length - (indexOfFirstItem + index);
+          const displayNo = filteredList.length - (((currentPage - 1) * itemsPerPage) + index);
           const isYasang = item.order_type === "야상배차";
           const isOlive = item.order_type === "올리브영";
 
@@ -416,19 +424,23 @@ export default function TruckPage() {
                     {item.unloading_place_2 && <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>}
                     <p className="text-red-500 font-black mt-1">비고: {item.remarks || "없음"}</p>
                   </div>
-                  {/* ⭐ 모바일 레이아웃에서 인풋과 버튼이 명확히 나오도록 수정 */}
+                  
+                  {/* ⭐ [모바일 버전 버튼 완전 분리 완료]: 위아래 정렬로 누르기 편하게 구조 최적화 */}
                   <div className="space-y-2 bg-slate-50 p-4 rounded-xl font-black block">
                     <p className="text-xs text-blue-600 font-black mb-2">🚛 기사 정보 매칭</p>
                     <input placeholder="차량정보 (예: 5톤 윙바디)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black mb-2" value={resData.car_info} onChange={e => setResData({...resData, car_info: e.target.value})} />
                     <input placeholder="기사명 연락처" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black mb-2" value={resData.driver_name} onChange={e => setResData({...resData, driver_name: e.target.value})} />
-                    <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                       <input placeholder="운반비" className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-blue-600 font-black" value={resData.fee} onChange={e => setResData({...resData, fee: e.target.value})} />
                       <select className="p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-blue-600" value={resData.status} onChange={e => setResData({...resData, status: e.target.value})}>
                         <option value="신청완료">신청완료</option>
                         <option value="배차완료">배차완료</option>
                       </select>
                     </div>
-                    <button onClick={() => handleResponseSubmit(item)} className="w-full py-3.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-md mt-2 block text-center">배차 업데이트 및 카톡 자동복사 📋</button>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => handleResponseSubmit(item.id)} className="w-full py-3.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-md text-center">배차 정보 저장 💾</button>
+                      <button onClick={() => handleCopyToClipboard(item)} className="w-full py-3.5 bg-green-600 text-white rounded-xl text-xs font-black shadow-md text-center">카톡 양식 복사 📋</button>
+                    </div>
                   </div>
                 </div>
               )}
