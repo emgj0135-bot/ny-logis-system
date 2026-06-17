@@ -20,6 +20,10 @@ export default function AccidentPage() {
 
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
+  // 📁 파일 업로드 상태 추가
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const [filters, setFilters] = useState({
     created_start: "", created_end: "",
     out_start: "", out_end: "",
@@ -29,7 +33,8 @@ export default function AccidentPage() {
 
   const [formData, setFormData] = useState({
     out_date: today, invoice_no: '', receiver_name: '', reason: '분실',
-    cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: ''
+    cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: '',
+    image_url: '' // ✨ DB에 저장할 이미지 주소 필드 추가
   });
 
   useEffect(() => { 
@@ -72,15 +77,63 @@ export default function AccidentPage() {
     }
   };
 
+  // 📁 파일 업로드 핸들러 (5MB 제한 / jpeg, png만)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      setUploadFile(null);
+      return;
+    }
+    const file = e.target.files[0];
+    
+    // 용량 제한 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("파일 용량은 5MB 이하만 가능합니다! ❌");
+      e.target.value = "";
+      return;
+    }
+    // 확장자 제한
+    if (file.type !== "image/jpeg" && file.type !== "image/png") {
+      alert("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다! ❌");
+      e.target.value = "";
+      return;
+    }
+    setUploadFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setIsUploading(true);
+      let currentImageUrl = formData.image_url;
+
+      // 새 파일이 선택된 경우 Supabase Storage에 업로드 수행
+      if (uploadFile) {
+        const fileExt = uploadFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `accident_images/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('accidents')
+          .upload(filePath, uploadFile);
+
+        if (uploadError) throw uploadError;
+
+        // Public URL 가져오기
+        const { data: urlData } = supabase.storage
+          .from('accidents')
+          .getPublicUrl(filePath);
+          
+        currentImageUrl = urlData.publicUrl;
+      }
+
+      const finalFormData = { ...formData, image_url: currentImageUrl };
+
       if (editingItem) {
-        const { error } = await supabase.from('accidents').update(formData).eq('id', editingItem.id);
+        const { error } = await supabase.from('accidents').update(finalFormData).eq('id', editingItem.id);
         if (error) throw error;
         alert("수정 완료! 💾");
       } else {
-        const { error } = await supabase.from('accidents').insert([formData]);
+        const { error } = await supabase.from('accidents').insert([finalFormData]);
         if (error) throw error;
         alert("접수 완료! 🚀");
       }
@@ -88,6 +141,8 @@ export default function AccidentPage() {
       await fetchAccidents();
     } catch (err: any) {
       alert("저장 실패: " + err.message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -116,12 +171,19 @@ export default function AccidentPage() {
   };
 
   const openModal = (item: any = null) => {
-    if (item) { setEditingItem(item); setFormData({ ...item }); }
-    else { setEditingItem(null); setFormData({ out_date: today, invoice_no: '', receiver_name: '', reason: '분실', cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: '' }); }
+    setUploadFile(null); // 모달 열 때 이전 업로드 파일 초기화
+    if (item) { 
+      setEditingItem(item); 
+      setFormData({ ...item }); 
+    }
+    else { 
+      setEditingItem(null); 
+      setFormData({ out_date: today, invoice_no: '', receiver_name: '', reason: '분실', cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: '', image_url: '' }); 
+    }
     setIsModalOpen(true);
   };
 
-  const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
+  const closeModal = () => { setIsModalOpen(false); setEditingItem(null); setUploadFile(null); };
 
   // ✨ 선택 토글 함수
   const toggleSelect = (id: number) => setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
@@ -147,6 +209,25 @@ export default function AccidentPage() {
       XLSX.writeFile(workbook, `사고접수_${excelRange.start}_${excelRange.end}.xlsx`);
       setShowExcelModal(false);
     } catch (err) { alert("엑셀 생성 오류!"); }
+  };
+
+  // ✨ 파일 강제 다운로드 핸들러
+  const handleFileDownload = async (e: React.MouseEvent, url: string, filename: string) => {
+    e.stopPropagation(); // 카드나 행 클릭 이벤트 방지
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'accident_evidence';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert("다운로드 중 오류가 발생했습니다.");
+    }
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -255,7 +336,13 @@ export default function AccidentPage() {
                   <td className="p-5 text-slate-400 text-xs font-black">{item.created_at.split('T')[0]}</td>
                   <td className="p-5 text-left font-black">
                     <p className="text-slate-800 text-base tracking-tight font-black">{item.invoice_no} <span className="text-slate-200 mx-2 font-normal">|</span> {item.receiver_name}</p>
-                    <p className="text-[11px] text-red-400 mt-1 uppercase font-black">{reasonEmojiMap[item.reason] || `🚨 ${item.reason}`}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[11px] text-red-400 uppercase font-black">{reasonEmojiMap[item.reason] || `🚨 ${item.reason}`}</p>
+                      {/* ✨ 증빙사진 다운로드 버튼 PC 버전 */}
+                      {item.image_url && (
+                        <button onClick={(e) => handleFileDownload(e, item.image_url, `사고증빙_${item.invoice_no}.png`)} className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded hover:bg-slate-200 font-black">💾 사진다운</button>
+                      )}
+                    </div>
                   </td>
                   <td className="p-5 text-slate-800 font-black">{item.out_date}</td>
                   <td className="p-5 text-red-600 text-lg font-black whitespace-nowrap">
@@ -338,6 +425,10 @@ export default function AccidentPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-2.5 border-t border-slate-50 text-xs">
+                {/* ✨ 증빙사진 다운로드 버튼 모바일 버전 */}
+                {item.image_url && (
+                  <button onClick={(e) => handleFileDownload(e, item.image_url, `사고증빙_${item.invoice_no}.png`)} className="text-green-600 font-black mr-auto">💾 사진다운</button>
+                )}
                 <button onClick={() => openModal(item)} className="text-blue-600 font-black">상세수정</button>
                 <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">기록삭제</button>
               </div>
@@ -390,7 +481,6 @@ export default function AccidentPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 md:p-12 pt-4 pb-24 md:pb-12">
-              {/* ✅ 오타 전면 수리: </header> 오폭을 지우고 진짜 <form> 태그 가동! */}
               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 font-black">
                 <div className="bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-[2.5rem] shadow-inner space-y-4 font-black">
                   <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 font-black">
@@ -425,6 +515,20 @@ export default function AccidentPage() {
                   <textarea placeholder="택배사 정식 답변 기록" value={formData.cj_answer} className="w-full p-4 bg-slate-50 rounded-xl text-xs shadow-inner h-24 outline-none font-black text-black" onChange={e => setFormData({...formData, cj_answer: e.target.value})} />
                 </div>
 
+                {/* ✨ [ADD] 사진 업로드 기능 추가 영역 (피드백칸과 진행현황 사이) */}
+                <div className="space-y-1 bg-slate-50 p-4 rounded-xl shadow-inner">
+                  <p className="text-[9px] text-slate-400 uppercase font-black ml-1">📸 사고 증빙 사진 첨부 (JPEG, PNG / 최대 5MB)</p>
+                  <input 
+                    type="file" 
+                    accept="image/jpeg, image/png"
+                    onChange={handleFileChange}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-slate-800 file:text-white hover:file:bg-black cursor-pointer"
+                  />
+                  {editingItem && formData.image_url && (
+                    <p className="text-[10px] text-green-600 font-bold mt-1">※ 이미 등록된 증빙 사진이 존재합니다. (새로 선택하면 변경됨)</p>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 items-end font-black">
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 uppercase font-black ml-1">진행 현황 상태</p>
@@ -439,8 +543,8 @@ export default function AccidentPage() {
                   </div>
                 </div>
 
-                <button type="submit" className="w-full mt-6 p-4 md:p-6 bg-red-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest font-black">
-                  {editingItem ? '수정완료 💾' : '등록완료 🚀'}
+                <button type="submit" disabled={isUploading} className="w-full mt-6 p-4 md:p-6 bg-red-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest font-black disabled:bg-slate-400">
+                  {isUploading ? '업로드 및 저장 중... ⏳' : (editingItem ? '수정완료 💾' : '등록완료 🚀')}
                 </button>
               </form>
             </div>
