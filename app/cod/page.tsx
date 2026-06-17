@@ -368,6 +368,11 @@ export default function CodPage() {
                     <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Customer Name</p>
                     <input required type="text" placeholder="업체명 기입" value={formData.customer_name} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
                   </div>
+                 
+                 <div className="space-y-1">
+                    <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">담당자명</p>
+                    <input required type="text" placeholder="담당자명 기입" value={formData.customer_name} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
+                  </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
