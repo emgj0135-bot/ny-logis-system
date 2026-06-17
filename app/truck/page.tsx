@@ -221,7 +221,7 @@ export default function TruckPage() {
         "기사명": item.order_responses?.[0]?.driver_name || "미등록",
         "차량정보": item.order_responses?.[0]?.car_info || "미등록",
         "운반비": item.order_responses?.[0]?.fee || "0",
-        "상태": item.status 
+        "status": item.status 
       }));
       
       const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -231,6 +231,12 @@ export default function TruckPage() {
       setShowExcelModal(false);
     } catch (err) { alert("엑셀 생성 오류!"); }
   };
+
+  // ✅ [수정 핵심]: 누락되었던 페이지네이션 핵심 슬라이싱 변수(currentItems)와 계산식 재배치
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
@@ -299,9 +305,9 @@ export default function TruckPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredList.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage).map((item, index) => {
+            {currentItems.map((item, index) => {
               const isExpanded = expandedId === item.id;
-              const displayNo = filteredList.length - (((currentPage - 1) * itemsPerPage) + index);
+              const displayNo = filteredList.length - (indexOfFirstItem + index);
               const isYasang = item.order_type === "야상배차";
               const isOlive = item.order_type === "올리브영";
 
@@ -368,8 +374,6 @@ export default function TruckPage() {
                                        <option value="신청완료">신청완료</option>
                                        <option value="배차완료">배차완료</option>
                                     </select>
-                                    
-                                    {/* ✨ [PC 버전 버튼 완전 분리 완료]: 나란히 가로 배치 */}
                                     <button onClick={() => handleResponseSubmit(item.id)} className="py-4 bg-blue-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-blue-700 transition-all">배차 정보 저장 💾</button>
                                     <button onClick={() => handleCopyToClipboard(item)} className="py-4 bg-green-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-green-700 transition-all">카톡 양식 복사 📋</button>
                                  </div>
@@ -390,7 +394,7 @@ export default function TruckPage() {
       <div className="block md:hidden space-y-4 text-black">
         {currentItems.map((item, index) => {
           const isExpanded = expandedId === item.id;
-          const displayNo = filteredList.length - (((currentPage - 1) * itemsPerPage) + index);
+          const displayNo = filteredList.length - (indexOfFirstItem + index);
           const isYasang = item.order_type === "야상배차";
           const isOlive = item.order_type === "올리브영";
 
@@ -424,8 +428,6 @@ export default function TruckPage() {
                     {item.unloading_place_2 && <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>}
                     <p className="text-red-500 font-black mt-1">비고: {item.remarks || "없음"}</p>
                   </div>
-                  
-                  {/* ⭐ [모바일 버전 버튼 완전 분리 완료]: 위아래 정렬로 누르기 편하게 구조 최적화 */}
                   <div className="space-y-2 bg-slate-50 p-4 rounded-xl font-black block">
                     <p className="text-xs text-blue-600 font-black mb-2">🚛 기사 정보 매칭</p>
                     <input placeholder="차량정보 (예: 5톤 윙바디)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black mb-2" value={resData.car_info} onChange={e => setResData({...resData, car_info: e.target.value})} />
