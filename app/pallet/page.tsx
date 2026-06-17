@@ -25,8 +25,9 @@ export default function PalletsPage() {
 
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
+  // ✨ [수정] formData 초기 상태에 manager_name 추가
   const [formData, setFormData] = useState({
-    type: "출고", company_name: "", issue_date: today, 
+    type: "출고", company_name: "", manager_name: "", issue_date: today, 
     kpp_n11_count: "", kpp_n12_count: "", kpp_number: "", 
     aj_11a_count: "", aj_12a_count: "", aj_name: "", remarks: "" 
   });
@@ -108,9 +109,11 @@ export default function PalletsPage() {
   const handleSubmit = async () => {
     if (!formData.company_name) return alert("업체명을 입력해주세요.");
     
+    // ✨ [수정] payload에 manager_name 주입
     const payload = {
       type: formData.type,
       company_name: formData.company_name,
+      manager_name: formData.manager_name,
       issue_date: formData.issue_date,
       kpp_n11_count: Number(formData.kpp_n11_count) || 0,
       kpp_n12_count: Number(formData.kpp_n12_count) || 0,
@@ -128,7 +131,7 @@ export default function PalletsPage() {
     } else {
       const { error } = await supabase.from('pallets').insert([{ ...payload, status: '미확인' }]);
       if (error) alert("등록 실패: " + error.message);
-      else { alert("등록 성공! 🚀"); closeModal(); await fetchData(); await fetchData(); setCurrentPage(1); }
+      else { alert("등록 성공! 🚀"); closeModal(); await fetchData(); setCurrentPage(1); }
     }
   };
 
@@ -151,7 +154,8 @@ export default function PalletsPage() {
       if (!XLSX) return alert("라이브러리 로딩 중입니다.");
       const { data, error } = await supabase.from('pallets').select('*').gte('issue_date', excelRange.start).lte('issue_date', excelRange.end).order('issue_date', { ascending: true });
       if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
-      const excelData = data.map(item => ({ "상태": item.status, "구분": item.type, "발행일자": item.issue_date, "업체명": item.company_name, "KPP N11": item.kpp_n11_count, "KPP N12": item.kpp_n12_count, "KPP 번호": item.kpp_number, "AJ 11A": item.aj_11a_count, "AJ 12A": item.aj_12a_count, "AJ 번호": item.aj_name, "비고": item.remarks, "작성일시": formatDate(item.created_at) }));
+      // 📊 엑셀 다운로드 컬럼에도 담당자명 추가 연동!
+      const excelData = data.map(item => ({ "상태": item.status, "구분": item.type, "발행일자": item.issue_date, "업체명": item.company_name, "담당자명": item.manager_name || "-", "KPP N11": item.kpp_n11_count, "KPP N12": item.kpp_n12_count, "KPP 번호": item.kpp_number, "AJ 11A": item.aj_11a_count, "AJ 12A": item.aj_12a_count, "AJ 번호": item.aj_name, "비고": item.remarks, "작성일시": formatDate(item.created_at) }));
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "전표내역");
@@ -169,14 +173,16 @@ export default function PalletsPage() {
     else setSelectedIds(prev => Array.from(new Set([...prev, ...currentPageIds])));
   };
 
+  // ✨ [수정] 모달을 닫을 때 manager_name도 깨끗이 공백화
   const closeModal = () => {
     setShowModal(false); setIsEdit(false); setTargetId(null);
-    setFormData({ type: "출고", company_name: "", issue_date: today, kpp_n11_count: "", kpp_n12_count: "", kpp_number: "", aj_11a_count: "", aj_12a_count: "", aj_name: "", remarks: "" });
+    setFormData({ type: "출고", company_name: "", manager_name: "", issue_date: today, kpp_n11_count: "", kpp_n12_count: "", kpp_number: "", aj_11a_count: "", aj_12a_count: "", aj_name: "", remarks: "" });
   };
 
+  // ✨ [수정] 수정 모달을 열 때 기존 DB의 manager_name 바인딩 연동
   const openEditModal = (item: any) => {
     setIsEdit(true); setTargetId(item.id);
-    setFormData({ type: item.type, company_name: item.company_name, issue_date: item.issue_date || today, kpp_n11_count: String(item.kpp_n11_count || ""), kpp_n12_count: String(item.kpp_n12_count || ""), kpp_number: item.kpp_number || "", aj_11a_count: String(item.aj_11a_count || ""), aj_12a_count: String(item.aj_12a_count || ""), aj_name: item.aj_name || "", remarks: item.remarks || "" });
+    setFormData({ type: item.type, company_name: item.company_name, manager_name: item.manager_name || "", issue_date: item.issue_date || today, kpp_n11_count: String(item.kpp_n11_count || ""), kpp_n12_count: String(item.kpp_n12_count || ""), kpp_number: item.kpp_number || "", aj_11a_count: String(item.aj_11a_count || ""), aj_12a_count: String(item.aj_12a_count || ""), aj_name: item.aj_name || "", remarks: item.remarks || "" });
     setShowModal(true);
   };
 
@@ -188,7 +194,7 @@ export default function PalletsPage() {
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       
-      {/* 🔵 상단 타이틀 바 (모바일 스케일 스퀴즈 대응) */}
+      {/* 🔵 상단 타이틀 바 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full"></div> 
@@ -203,7 +209,7 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 및 일괄 처리 패널 (모바일 맞춤형 축소) */}
+      {/* 🔍 검색 필터 및 일괄 처리 패널 */}
       <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 mb-6 md:mb-8 space-y-4 md:space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-10 text-black">
           <div className="space-y-2">
@@ -224,7 +230,6 @@ export default function PalletsPage() {
           </div>
         </div>
         
-        {/* 필터 제어 하단 라인 (모바일에서 일괄처리 버튼 3종을 가로 스크롤 패널로 보완 🔥) */}
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center pt-2 md:pt-4 border-t border-slate-50">
           <div className="grid grid-cols-2 sm:flex gap-2">
             <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="p-3 bg-slate-100 rounded-xl text-xs font-black text-slate-600 outline-none">
@@ -240,7 +245,6 @@ export default function PalletsPage() {
             <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-5 py-3 rounded-xl font-black text-xs border border-slate-100">리셋</button>
           </div>
           
-          {/* 일괄 제어 컴포넌트 셋 (모바일 전용 터치 마진 최적화) */}
           <div className="overflow-x-auto pb-1 lg:pb-0 lg:ml-auto custom-scrollbar shrink-0">
             <div className="flex gap-1.5 bg-slate-100 p-1.5 rounded-xl w-max">
               <button onClick={() => handleBulkUpdate('확인완료')} className="bg-white text-blue-600 px-3 py-2 rounded-lg text-[10px] font-black shadow-sm whitespace-nowrap">일괄확인 ✅</button>
@@ -251,15 +255,15 @@ export default function PalletsPage() {
         </div>
       </div>
 
-      {/* 📋 메인 데이터 목록 분기 가드 */}
-
-      {/* 1. PC 뷰포트 테이블 (md 이상 활성화) */}
+      {/* 📋 1. PC 테이블 뷰 (md 이상) */}
       <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-[11px] text-black">
         <table className="w-full">
           <thead className="bg-slate-50 text-slate-400 font-bold border-b uppercase tracking-widest text-[10px]">
             <tr>
               <th className="p-6 text-center w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
               <th className="p-6 text-left">상태</th>
+              {/* ✨ [UI 요구사항] 상태와 작성일자 사이에 담당자명 헤더 기입! */}
+              <th className="p-6 text-left text-blue-600 font-black">담당자</th>
               <th className="p-6 text-left">작성일자</th>
               <th className="p-6 text-center">구분</th> 
               <th className="p-6 text-left">발행일 / 업체명</th>
@@ -275,6 +279,8 @@ export default function PalletsPage() {
                 <td className="p-6">
                   <button onClick={(e) => handleStatusUpdate(e, item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 animate-pulse' : 'bg-green-50 text-green-500'}`}>{item.status}</button>
                 </td>
+                {/* ✨ [UI 요구사항] 상태와 작성일자 사이에 담당자 데이터 확인 구현 */}
+                <td className="p-6 text-slate-700 font-black tracking-tight">{item.manager_name || "-"}</td>
                 <td className="p-6 text-slate-400 text-[10px] whitespace-nowrap">{formatDate(item.created_at)}</td>
                 <td className="p-6 text-center"><span className={`inline-block px-3 py-1 rounded-lg text-[10px] ${item.type === '출고' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{item.type}</span></td>
                 <td className="p-6 whitespace-nowrap font-black"><div>{item.issue_date}</div><div className="text-slate-400 text-[10px] tracking-tighter">{item.company_name}</div></td>
@@ -292,16 +298,14 @@ export default function PalletsPage() {
               </tr>
             ))}
             {currentItems.length === 0 && (
-              <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
+              <tr><td colSpan={9} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* 2. 모바일 특화 자산형 카드 리스트 (md 미만 자동 연출 📱) */}
+      {/* 📱 2. 모바일 특화 카드 리스트 (md 미만) */}
       <div className="block md:hidden space-y-4 text-black font-black">
-        
-        {/* 전체 선택 체크 마스터 한 줄바형 구성 */}
         {currentItems.length > 0 && (
           <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-400">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -316,8 +320,6 @@ export default function PalletsPage() {
           const isChecked = selectedIds.includes(item.id);
           return (
             <div key={item.id} className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 transition-all ${isChecked ? 'border-blue-300 bg-blue-50/10' : 'border-slate-100'}`}>
-              
-              {/* 카드 상단 헤더줄 */}
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" checked={isChecked} onChange={() => toggleSelect(item.id)} />
@@ -327,14 +329,16 @@ export default function PalletsPage() {
                 <span className="text-[9px] text-slate-400">{item.issue_date} 발행</span>
               </div>
 
-              {/* 본문 터치영역 (클릭 시 모달 팝업 가이드) */}
               <div className="space-y-2 text-left" onClick={() => openEditModal(item)}>
                 <div>
-                  <p className="text-base font-black text-slate-900 tracking-tight">{item.company_name}</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-base font-black text-slate-900 tracking-tight">{item.company_name}</p>
+                    {/* 📱 모바일 버전 전표 이름 옆에도 담당자 미니 텍스트 추가 */}
+                    <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">👤 {item.manager_name || "미지정"}</span>
+                  </div>
                   <p className="text-[10px] text-slate-400 font-normal">등록: {formatDate(item.created_at)}</p>
                 </div>
 
-                {/* 파렛트 입출고 자산 랙 스케일 박스 */}
                 <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs font-bold">
                   <div className="border-r border-slate-200 pr-2">
                     <p className="text-[10px] text-blue-600 font-black mb-0.5">KPP 파렛트</p>
@@ -351,7 +355,6 @@ export default function PalletsPage() {
                 {item.remarks && <p className="text-xs text-slate-400 font-normal truncate">💬 비고: {item.remarks}</p>}
               </div>
 
-              {/* 하단 단일 관리 버튼 */}
               <div className="flex justify-end gap-3 pt-2 border-t border-slate-50 text-xs">
                 <button onClick={() => openEditModal(item)} className="text-blue-600 font-black">수정</button>
                 <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">삭제</button>
@@ -365,7 +368,7 @@ export default function PalletsPage() {
         )}
       </div>
         
-      {/* 🔢 페이지네이션 (모바일 스케일 조정) */}
+      {/* 🔢 페이지네이션 */}
       <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-6 bg-white border-t border-slate-100 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
         <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-2 text-xs font-black text-slate-400 disabled:opacity-30">PREV</button>
         <div className="flex gap-1">
@@ -391,7 +394,7 @@ export default function PalletsPage() {
         </div>
       )}
 
-      {/* 🟢 신규/수정 모달 (모바일 스키니 스크롤 대응 인풋 패킷 강화 📱) */}
+      {/* 🟢 신규/수정 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/70 backdrop-blur-md flex justify-center items-center p-3 md:p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-2xl md:rounded-[2.5rem] shadow-2xl p-5 md:p-10 overflow-y-auto max-h-[92vh] font-black text-black">
@@ -404,10 +407,15 @@ export default function PalletsPage() {
                     <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2 rounded-lg font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
                   ))}
                 </div>
-                <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none text-blue-600 shadow-inner" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
+                <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none text-blue-600 shadow-inner" value={formData.issue_date} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
               </div>
               
-              <input placeholder="업체명 (필수)" className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
+              {/* ✨ [수정] 업체명 인풋 단일 배치에서 담당자명 기입창까지 포함하도록 고도화 */}
+              <div className="grid grid-cols-2 gap-3">
+                <input placeholder="업체명 (필수)" className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
+                {/* 👤 [요구사항] 업체명과 KPP 세션 사이에 배치한 담당자명 인풋 박스 */}
+                <input placeholder="담당자명" className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner text-blue-600" value={formData.manager_name} onChange={e => setFormData({...formData, manager_name: e.target.value})} />
+              </div>
               
               {/* KPP 세션 */}
               <div className="space-y-1.5">
