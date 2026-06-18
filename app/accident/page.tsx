@@ -1,10 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-// ✅ 1. createClient 가져오기
 import { createClient } from '../../lib/supabase';
 
 export default function AccidentPage() {
-  // ✅ 2. 컴포넌트 시작하자마자 supabase 머신 딱 한 번만 돌리기!
   const [supabase] = useState(() => createClient());
 
   const [list, setList] = useState<any[]>([]);
@@ -15,12 +13,12 @@ export default function AccidentPage() {
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [selectedIds, setSelectedIds] = useState<number[]>([]); // ✨ 일괄 선택용 상태
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const today = new Date().toISOString().split('T')[0];
 
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
-  // 📁 파일 업로드 상태 추가
+  // 📂 파일 업로드 상태 (압축파일/PDF 대응)
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -34,7 +32,7 @@ export default function AccidentPage() {
   const [formData, setFormData] = useState({
     out_date: today, invoice_no: '', receiver_name: '', reason: '분실',
     cj_answer: '', status: '접수완료', confirmed_amount: 0, memo: '',
-    image_url: '' // ✨ DB에 저장할 이미지 주소 필드 추가
+    image_url: '' // 컬럼명은 유지하되 파일 주소를 저장함
   });
 
   useEffect(() => { 
@@ -54,7 +52,6 @@ export default function AccidentPage() {
     setSelectedIds([]); 
   };
 
-  // 🗑️ 단일 삭제 로직
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation(); 
     if (!confirm("정말 삭제하시겠습니까?")) return;
@@ -65,11 +62,9 @@ export default function AccidentPage() {
     }
   };
 
-  // 🗑️ 일괄 삭제 로직
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return alert("삭제할 항목을 먼저 선택해주세요! 👆");
     if (!confirm(`정말 선택한 ${selectedIds.length}개의 사고 기록을 싹 지우시겠습니까? 💣`)) return;
-    
     const { error } = await supabase.from('accidents').delete().in('id', selectedIds);
     if (!error) { 
       alert("일괄 삭제 완료! 🗑️"); 
@@ -77,7 +72,7 @@ export default function AccidentPage() {
     }
   };
 
-  // 📁 파일 업로드 핸들러 (5MB 제한 / jpeg, png만)
+  // 📂 파일 업로드 핸들러 (10MB 제한 / ZIP, PDF, RAR 등)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) {
       setUploadFile(null);
@@ -85,18 +80,23 @@ export default function AccidentPage() {
     }
     const file = e.target.files[0];
     
-    // 용량 제한 (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("파일 용량은 5MB 이하만 가능합니다! ❌");
+    // 용량 제한 (10MB로 상향)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("파일 용량은 10MB 이하만 가능합니다! ❌");
       e.target.value = "";
       return;
     }
-    // 확장자 제한
-    if (file.type !== "image/jpeg" && file.type !== "image/png") {
-      alert("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다! ❌");
+
+    // 허용 확장자 체크 (.zip, .pdf, .rar, .7z)
+    const allowedExtensions = ['zip', 'pdf', 'rar', '7z'];
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    
+    if (!fileExt || !allowedExtensions.includes(fileExt)) {
+      alert("ZIP, PDF, RAR 형식의 파일만 업로드 가능합니다! ❌");
       e.target.value = "";
       return;
     }
+
     setUploadFile(file);
   };
 
@@ -104,13 +104,12 @@ export default function AccidentPage() {
     e.preventDefault();
     try {
       setIsUploading(true);
-      let currentImageUrl = formData.image_url;
+      let currentFileUrl = formData.image_url;
 
-      // 새 파일이 선택된 경우 Supabase Storage에 업로드 수행
       if (uploadFile) {
         const fileExt = uploadFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `accident_images/${fileName}`;
+        const filePath = `accident_files/${fileName}`; // 폴더명 변경
 
         const { error: uploadError } = await supabase.storage
           .from('accidents')
@@ -118,15 +117,14 @@ export default function AccidentPage() {
 
         if (uploadError) throw uploadError;
 
-        // Public URL 가져오기
         const { data: urlData } = supabase.storage
           .from('accidents')
           .getPublicUrl(filePath);
           
-        currentImageUrl = urlData.publicUrl;
+        currentFileUrl = urlData.publicUrl;
       }
 
-      const finalFormData = { ...formData, image_url: currentImageUrl };
+      const finalFormData = { ...formData, image_url: currentFileUrl };
 
       if (editingItem) {
         const { error } = await supabase.from('accidents').update(finalFormData).eq('id', editingItem.id);
@@ -171,7 +169,7 @@ export default function AccidentPage() {
   };
 
   const openModal = (item: any = null) => {
-    setUploadFile(null); // 모달 열 때 이전 업로드 파일 초기화
+    setUploadFile(null);
     if (item) { 
       setEditingItem(item); 
       setFormData({ ...item }); 
@@ -185,7 +183,6 @@ export default function AccidentPage() {
 
   const closeModal = () => { setIsModalOpen(false); setEditingItem(null); setUploadFile(null); };
 
-  // ✨ 선택 토글 함수
   const toggleSelect = (id: number) => setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   const toggleSelectAll = () => {
     const currentIds = currentItems.map(i => i.id);
@@ -211,16 +208,18 @@ export default function AccidentPage() {
     } catch (err) { alert("엑셀 생성 오류!"); }
   };
 
-  // ✨ 파일 강제 다운로드 핸들러
+  // ✨ 파일 강제 다운로드 핸들러 (ZIP/PDF 대응)
   const handleFileDownload = async (e: React.MouseEvent, url: string, filename: string) => {
-    e.stopPropagation(); // 카드나 행 클릭 이벤트 방지
+    e.stopPropagation();
     try {
       const response = await fetch(url);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = filename || 'accident_evidence';
+      // 확장자 유지를 위해 원본 URL에서 확장자 추출
+      const ext = url.split('.').pop()?.split('?')[0];
+      link.download = filename ? `${filename}.${ext}` : `evidence_file.${ext}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -235,7 +234,6 @@ export default function AccidentPage() {
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
-  // 사고 사유별 이모지 매칭 맵
   const reasonEmojiMap: any = {
     "분실": "🚨 분실",
     "파손": "📦 파손",
@@ -281,7 +279,6 @@ export default function AccidentPage() {
           </div>
         </div>
         
-        {/* 통합 검색 인풋바 라인 */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2 md:pt-4 border-t border-slate-50 font-black items-start sm:items-center">
           <div className="flex gap-2 w-full sm:w-auto">
             <select className="p-3.5 bg-slate-100 rounded-xl border-none text-xs text-slate-600 outline-none font-black" value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
@@ -291,36 +288,29 @@ export default function AccidentPage() {
             </select>
             <input type="text" placeholder="송장번호 또는 수령인 검색" className="p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none text-xs font-black flex-1 sm:w-64" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} />
           </div>
-          
           <div className="flex gap-2 w-full sm:w-auto">
             <button onClick={handleSearch} className="flex-1 sm:flex-none bg-slate-800 text-white px-6 py-3 rounded-xl text-xs hover:bg-black transition-all font-black">검색 🔍</button>
             <button onClick={resetFilters} className="bg-slate-50 text-slate-400 px-5 py-3 rounded-xl text-xs border border-slate-100 font-black">리셋</button>
           </div>
-          
-          {/* 일괄 삭제 패널 */}
           <div className="w-full sm:w-auto sm:ml-auto bg-slate-100 p-1.5 rounded-xl text-center shrink-0">
             <button onClick={handleBulkDelete} className="w-full sm:w-auto bg-white text-red-500 px-4 py-2 rounded-lg text-xs font-black shadow-sm whitespace-nowrap">선택 항목 일괄 삭제 🗑️</button>
           </div>
         </div>
       </div>
 
-      {/* 📋 메인 목록 분기 */}
-
-      {/* 1. PC 대형 스크린 테이블 (md 이상 노출) */}
+      {/* 📋 PC 테이블 */}
       <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-black font-black">
         <table className="w-full text-sm font-black">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
-              <th className="p-5 w-12 text-center">
-                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" onChange={toggleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} />
-              </th>
+              <th className="p-5 w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-red-600" onChange={toggleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} /></th>
               <th className="p-5 w-16">No</th>
-              <th className="p-5 w-32 italic font-black">Created</th>
-              <th className="p-5 text-left font-black">사고 내용 (송장 / 수령인)</th>
-              <th className="p-5 w-32 italic font-black">Outbound</th>
-              <th className="p-5 w-40 font-black">변상 금액</th>
-              <th className="p-5 w-24 font-black">상태</th>
-              <th className="p-5 w-32 font-black">관리</th>
+              <th className="p-5 w-32 italic">Created</th>
+              <th className="p-5 text-left">사고 내용 (송장 / 수령인)</th>
+              <th className="p-5 w-32 italic">Outbound</th>
+              <th className="p-5 w-40">변상 금액</th>
+              <th className="p-5 w-24">상태</th>
+              <th className="p-5 w-32">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -329,34 +319,28 @@ export default function AccidentPage() {
               const isSelected = selectedIds.includes(item.id);
               return (
                 <tr key={item.id} onClick={() => openModal(item)} className={`cursor-pointer hover:bg-slate-50 border-b transition-colors text-center font-black ${isSelected ? 'bg-red-50/30' : ''}`}>
-                  <td className="p-5" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" checked={isSelected} onChange={() => toggleSelect(item.id)} />
-                  </td>
+                  <td className="p-5" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-red-600" checked={isSelected} onChange={() => toggleSelect(item.id)} /></td>
                   <td className="p-5 text-red-600">{displayNo}</td>
-                  <td className="p-5 text-slate-400 text-xs font-black">{item.created_at.split('T')[0]}</td>
-                  <td className="p-5 text-left font-black">
-                    <p className="text-slate-800 text-base tracking-tight font-black">{item.invoice_no} <span className="text-slate-200 mx-2 font-normal">|</span> {item.receiver_name}</p>
+                  <td className="p-5 text-slate-400 text-xs">{item.created_at.split('T')[0]}</td>
+                  <td className="p-5 text-left">
+                    <p className="text-slate-800 text-base tracking-tight font-black">{item.invoice_no} | {item.receiver_name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="text-[11px] text-red-400 uppercase font-black">{reasonEmojiMap[item.reason] || `🚨 ${item.reason}`}</p>
-                      {/* ✨ 증빙사진 다운로드 버튼 PC 버전 */}
+                      <p className="text-[11px] text-red-400 uppercase">{reasonEmojiMap[item.reason] || item.reason}</p>
+                      {/* ✨ 파일 다운로드 버튼 (PDF/ZIP 대응) */}
                       {item.image_url && (
-                        <button onClick={(e) => handleFileDownload(e, item.image_url, `사고증빙_${item.invoice_no}.png`)} className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded hover:bg-slate-200 font-black">💾 사진다운</button>
+                        <button onClick={(e) => handleFileDownload(e, item.image_url, `사고증빙_${item.invoice_no}`)} className="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 rounded hover:bg-blue-100 font-black">💾 파일다운</button>
                       )}
                     </div>
                   </td>
-                  <td className="p-5 text-slate-800 font-black">{item.out_date}</td>
-                  <td className="p-5 text-red-600 text-lg font-black whitespace-nowrap">
-                    {item.confirmed_amount.toLocaleString()}원
-                  </td>
+                  <td className="p-5 text-slate-800">{item.out_date}</td>
+                  <td className="p-5 text-red-600 text-lg font-black">{item.confirmed_amount.toLocaleString()}원</td>
                   <td className="p-5">
-                    <span className={`text-[10px] px-4 py-1.5 rounded-full font-black inline-block whitespace-nowrap ${item.status === '보상승인' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>
-                      {item.status}
-                    </span>
+                    <span className={`text-[10px] px-4 py-1.5 rounded-full font-black inline-block ${item.status === '보상승인' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{item.status}</span>
                   </td>
-                  <td className="p-5 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="p-5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2 justify-center text-[10px] text-slate-300 font-black">
-                      <button onClick={() => openModal(item)} className="hover:text-blue-600 font-black">수정</button>
-                      <button onClick={(e) => handleDelete(e, item.id)} className="hover:text-red-500 font-black">삭제</button>
+                      <button onClick={() => openModal(item)} className="hover:text-blue-600">수정</button>
+                      <button onClick={(e) => handleDelete(e, item.id)} className="hover:text-red-500">삭제</button>
                     </div>
                   </td>
                 </tr>
@@ -366,24 +350,13 @@ export default function AccidentPage() {
         </table>
       </div>
 
-      {/* 2. 모바일 특화 와이드 뷰 카드형 리스트 (md 미만 활성화 📱) */}
+      {/* 📱 모바일 리스트 */}
       <div className="block md:hidden space-y-4 text-black font-black">
-        {currentItems.length > 0 && (
-          <div className="flex items-center gap-2 px-1 text-xs text-slate-400">
-            <input type="checkbox" className="w-4 h-4 rounded accent-red-600" onChange={toggleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} />
-            <span>현재 페이지 사고내역 전체 선택 ({selectedIds.length}개 선택됨)</span>
-          </div>
-        )}
-
         {currentItems.map((item, index) => {
           const displayNo = filteredList.length - (indexOfFirstItem + index);
           const isSelected = selectedIds.includes(item.id);
-
           return (
-            <div 
-              key={item.id} 
-              className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 transition-all ${isSelected ? 'border-red-300 bg-red-50/10' : 'border-slate-100'}`}
-            >
+            <div key={item.id} className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 ${isSelected ? 'border-red-300 bg-red-50/10' : 'border-slate-100'}`}>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" className="w-4 h-4 rounded accent-red-600" checked={isSelected} onChange={() => toggleSelect(item.id)} />
@@ -393,41 +366,21 @@ export default function AccidentPage() {
                 </div>
                 <span className="text-[10px] text-slate-400">{item.created_at.split('T')[0]}</span>
               </div>
-
               <div className="space-y-1.5 text-left" onClick={() => openModal(item)}>
-                <div>
-                  <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">송장번호</p>
-                  <p className="text-base font-black text-slate-900 tracking-tight break-all">{item.invoice_no}</p>
-                </div>
-                
+                <div><p className="text-slate-400 text-[10px] uppercase tracking-wider">송장번호</p><p className="text-base font-black text-slate-900 tracking-tight break-all">{item.invoice_no}</p></div>
                 <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs font-bold">
-                  <div>
-                    <p className="text-[10px] text-slate-400 mb-0.5">수령인(고객)</p>
-                    <p className="text-slate-800 font-black">{item.receiver_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 mb-0.5">출고일자</p>
-                    <p className="text-slate-800 font-black">{item.out_date}</p>
-                  </div>
+                  <div><p className="text-[10px] text-slate-400 mb-0.5">수령인(고객)</p><p className="text-slate-800 font-black">{item.receiver_name}</p></div>
+                  <div><p className="text-[10px] text-slate-400 mb-0.5">출고일자</p><p className="text-slate-800 font-black">{item.out_date}</p></div>
                 </div>
-
                 <div className="flex justify-between items-baseline pt-1">
                   <span className="text-xs text-slate-400 font-bold">최종 확정 변상금:</span>
                   <span className="text-lg font-black text-red-600">{item.confirmed_amount.toLocaleString()}원</span>
                 </div>
-
-                {item.cj_answer && (
-                  <div className="mt-2 bg-red-50/30 p-2 rounded-lg border border-red-100/50">
-                    <p className="text-[9px] text-red-500 font-black">💬 CJ 대한통운 접수 답변</p>
-                    <p className="text-xs text-slate-600 font-bold mt-0.5 break-keep">{item.cj_answer}</p>
-                  </div>
-                )}
               </div>
-
               <div className="flex justify-end gap-3 pt-2.5 border-t border-slate-50 text-xs">
-                {/* ✨ 증빙사진 다운로드 버튼 모바일 버전 */}
+                {/* ✨ 파일 다운로드 버튼 (모바일) */}
                 {item.image_url && (
-                  <button onClick={(e) => handleFileDownload(e, item.image_url, `사고증빙_${item.invoice_no}.png`)} className="text-green-600 font-black mr-auto">💾 사진다운</button>
+                  <button onClick={(e) => handleFileDownload(e, item.image_url, `사고증빙_${item.invoice_no}`)} className="text-blue-600 font-black mr-auto">💾 파일다운</button>
                 )}
                 <button onClick={() => openModal(item)} className="text-blue-600 font-black">상세수정</button>
                 <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">기록삭제</button>
@@ -437,9 +390,7 @@ export default function AccidentPage() {
         })}
       </div>
 
-      {currentItems.length === 0 && (
-        <div className="p-16 bg-white rounded-xl text-center text-slate-300 italic">데이터가 없습니다. 🔍</div>
-      )}
+      {currentItems.length === 0 && <div className="p-16 bg-white rounded-xl text-center text-slate-300 italic">데이터가 없습니다. 🔍</div>}
         
       {/* 🔢 페이지네이션 */}
       <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-8 bg-white border-t border-slate-50 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
@@ -455,12 +406,12 @@ export default function AccidentPage() {
       {/* 📥 엑셀 모달 */}
       {showExcelModal && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-center items-center p-4 z-[60] overflow-hidden">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 text-black font-black">
-            <h2 className="text-base md:text-lg font-black mb-2 text-slate-800 tracking-tight uppercase">Excel Download</h2>
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-black font-black">
+            <h2 className="text-lg font-black mb-2 text-slate-800 uppercase">Excel Download</h2>
             <p className="text-slate-400 text-xs font-bold mb-6">다운로드할 작성일자 기간을 선택하세요.</p>
-            <div className="space-y-4 font-black">
-              <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-blue-600 shadow-inner text-xs font-bold" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
-              <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-blue-600 shadow-inner text-xs font-bold" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
+            <div className="space-y-4">
+              <input type="date" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-blue-600 shadow-inner text-xs font-bold" value={excelRange.start} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
+              <input type="date" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-blue-600 shadow-inner text-xs font-bold" value={excelRange.end} onChange={e => setExcelRange({...excelRange, end: e.target.value})} />
               <div className="flex gap-3 pt-2">
                 <button onClick={downloadExcel} className="flex-1 bg-green-600 text-white p-3.5 rounded-xl font-black text-xs hover:bg-green-700 shadow-md">엑셀 생성</button>
                 <button onClick={() => setShowExcelModal(false)} className="bg-slate-100 text-slate-400 px-4 rounded-xl font-black text-xs">취소</button>
@@ -474,16 +425,14 @@ export default function AccidentPage() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end md:p-4 z-50 overflow-hidden">
           <div className="bg-white w-full max-w-2xl h-full md:h-auto md:rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-right duration-300 relative text-black flex flex-col font-black">
-            
-            <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 md:p-10 pb-4 z-20 flex justify-between items-center border-b border-slate-50 font-black">
-              <h2 className="text-xl md:text-3xl font-black mb-0 uppercase text-slate-900 tracking-tighter leading-none">사고 <span className="text-red-600">데이터 기록</span></h2>
-              <button onClick={closeModal} className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 transition-all text-sm md:text-xl font-black">✕</button>
+            <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 md:p-10 pb-4 z-20 flex justify-between items-center border-b border-slate-50">
+              <h2 className="text-xl md:text-3xl font-black uppercase text-slate-900 tracking-tighter leading-none">사고 <span className="text-red-600">데이터 기록</span></h2>
+              <button onClick={closeModal} className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 transition-all font-black">✕</button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-5 md:p-12 pt-4 pb-24 md:pb-12">
-              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 font-black">
-                <div className="bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-[2.5rem] shadow-inner space-y-4 font-black">
-                  <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 font-black">
+              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+                <div className="bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-[2.5rem] shadow-inner space-y-4">
+                  <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <p className="text-[9px] text-slate-400 uppercase font-black ml-1">출고일자</p>
                       <input required type="date" value={formData.out_date} className="w-full p-4 bg-white rounded-xl text-xs shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, out_date: e.target.value})} />
@@ -494,8 +443,7 @@ export default function AccidentPage() {
                     </div>
                   </div>
                 </div>
-
-                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 font-black">
+                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 uppercase font-black ml-1">고객 수령인명</p>
                     <input required type="text" placeholder="수령인 성함" value={formData.receiver_name} className="w-full p-4 bg-slate-50 rounded-xl text-xs shadow-inner outline-none font-black text-black" onChange={e => setFormData({...formData, receiver_name: e.target.value})} />
@@ -509,27 +457,26 @@ export default function AccidentPage() {
                     </select>
                   </div>
                 </div>
-
                 <div className="space-y-1">
                   <p className="text-[9px] text-slate-400 uppercase font-black ml-1">CJ대한통운 지사 답변 피드백</p>
                   <textarea placeholder="택배사 정식 답변 기록" value={formData.cj_answer} className="w-full p-4 bg-slate-50 rounded-xl text-xs shadow-inner h-24 outline-none font-black text-black" onChange={e => setFormData({...formData, cj_answer: e.target.value})} />
                 </div>
 
-                {/* ✨ [ADD] 사진 업로드 기능 추가 영역 (피드백칸과 진행현황 사이) */}
+                {/* ✨ [UPDATE] 증빙 파일 업로드 (ZIP, PDF 대응) */}
                 <div className="space-y-1 bg-slate-50 p-4 rounded-xl shadow-inner">
-                  <p className="text-[9px] text-slate-400 uppercase font-black ml-1">📸 사고 증빙 사진 첨부 (JPEG, PNG / 최대 5MB)</p>
+                  <p className="text-[9px] text-slate-400 uppercase font-black ml-1">📂 사고 증빙 파일 (ZIP, PDF / 최대 10MB)</p>
                   <input 
                     type="file" 
-                    accept="image/jpeg, image/png"
+                    accept=".zip,.pdf,.rar,.7z"
                     onChange={handleFileChange}
                     className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-slate-800 file:text-white hover:file:bg-black cursor-pointer"
                   />
                   {editingItem && formData.image_url && (
-                    <p className="text-[10px] text-green-600 font-bold mt-1">※ 이미 등록된 증빙 사진이 존재합니다. (새로 선택하면 변경됨)</p>
+                    <p className="text-[10px] text-blue-600 font-bold mt-1">※ 등록된 증빙 파일이 있습니다. (새로 선택 시 교체됨)</p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 items-end font-black">
+                <div className="grid grid-cols-2 gap-3 items-end">
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 uppercase font-black ml-1">진행 현황 상태</p>
                     <select value={formData.status} className="w-full p-4 bg-white border-2 border-slate-100 rounded-xl text-xs outline-none font-black text-black" onChange={e => setFormData({...formData, status: e.target.value})}>
@@ -542,9 +489,8 @@ export default function AccidentPage() {
                     <input type="number" value={formData.confirmed_amount} className="w-full p-4 bg-white border-2 border-red-100 rounded-xl text-xs outline-none text-right text-red-600 font-black" onChange={e => setFormData({...formData, confirmed_amount: parseInt(e.target.value) || 0})} />
                   </div>
                 </div>
-
-                <button type="submit" disabled={isUploading} className="w-full mt-6 p-4 md:p-6 bg-red-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest font-black disabled:bg-slate-400">
-                  {isUploading ? '업로드 및 저장 중... ⏳' : (editingItem ? '수정완료 💾' : '등록완료 🚀')}
+                <button type="submit" disabled={isUploading} className="w-full mt-6 p-4 md:p-6 bg-red-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest disabled:bg-slate-400">
+                  {isUploading ? '파일 업로드 중... ⏳' : (editingItem ? '수정완료 💾' : '등록완료 🚀')}
                 </button>
               </form>
             </div>
