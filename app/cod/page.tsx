@@ -31,8 +31,14 @@ export default function CodPage() {
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
   const [formData, setFormData] = useState({
-    pay_type: '정산입금', customer_name: '', delivery_company: '',
-    return_invoice: '', fee: 0, memo: '', status: '미확인'
+    pay_type: '정산입금', 
+    customer_name: '', 
+    manager_name: '', // ✨ 담당자명 필드 추가
+    delivery_company: '',
+    return_invoice: '', 
+    fee: 0, 
+    memo: '', 
+    status: '미확인'
   });
 
   useEffect(() => { 
@@ -69,12 +75,13 @@ export default function CodPage() {
       const excelData = data.map((item, index) => ({
         "No": index + 1,
         "작성일자": item.created_at.split('T')[0],
+        "상태": item.status,
+        "담당자": item.manager_name || "-", // 엑셀에도 담당자 추가
         "구분": item.pay_type,
         "업체명": item.customer_name,
         "택배사": item.delivery_company,
         "반송장번호": item.return_invoice,
         "운임비": item.fee,
-        "상태": item.status,
         "비고": item.memo || ""
       }));
       const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -91,9 +98,13 @@ export default function CodPage() {
     if (searchInputs.endDate) temp = temp.filter(item => item.created_at.split('T')[0] <= searchInputs.endDate);
     if (searchInputs.searchText) {
       const txt = searchInputs.searchText.toLowerCase();
-      temp = temp.filter(item => item.customer_name.toLowerCase().includes(txt) || item.return_invoice.toLowerCase().includes(txt));
+      // 업체명, 반송장뿐만 아니라 담당자명으로도 검색되게 수정!
+      temp = temp.filter(item => 
+        item.customer_name.toLowerCase().includes(txt) || 
+        item.return_invoice.toLowerCase().includes(txt) ||
+        (item.manager_name && item.manager_name.toLowerCase().includes(txt))
+      );
     }
-    // 🛠️ [냉정 수리 완료] Math.status 오타 완전 박살내고 searchInputs.status로 정상화!
     if (searchInputs.status) temp = temp.filter(item => item.status === searchInputs.status);
     if (searchInputs.payType) temp = temp.filter(item => item.pay_type === searchInputs.payType);
     setFilteredList(temp);
@@ -143,7 +154,6 @@ export default function CodPage() {
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation(); 
     if (!confirm("삭제하시겠습니까?")) return;
-    
     const { error } = await supabase.from('cod_manage').delete().eq('id', id); 
     if (!error) { 
       alert("삭제 완료! 🗑️"); 
@@ -153,20 +163,19 @@ export default function CodPage() {
 
   const openModal = (item: any = null) => {
     if (item) { setEditingItem(item); setFormData({ ...item }); }
-    else { setEditingItem(null); setFormData({ pay_type: '정산입금', customer_name: '', delivery_company: '', return_invoice: '', fee: 0, memo: '', status: '미확인' }); }
+    else { setEditingItem(null); setFormData({ pay_type: '정산입금', customer_name: '', manager_name: '', delivery_company: '', return_invoice: '', fee: 0, memo: '', status: '미확인' }); }
     setIsModalOpen(true);
   };
 
   const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
 
-  // 페이지네이션용 데이터 계산
   const currentItems = filteredList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
       
-      {/* 🔵 헤더 영역 (반응형 최적화) */}
+      {/* 🔵 헤더 영역 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-10">
         <div className="flex items-center gap-4">
           <div className="w-2 h-10 bg-blue-600 rounded-full shadow-lg shadow-blue-100"></div> 
@@ -181,7 +190,7 @@ export default function CodPage() {
         </div>
       </div>
 
-      {/* 🔍 검색 필터 (모바일 분기 처리 최적화) */}
+      {/* 🔍 검색 필터 */}
       <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 mb-6 md:mb-8 space-y-4 md:space-y-6 font-black">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-10 text-black">
           <div className="space-y-2">
@@ -194,7 +203,7 @@ export default function CodPage() {
           </div>
           <div className="space-y-2">
             <p className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-widest">Search Info</p>
-            <input type="text" placeholder="업체명 또는 반송장번호" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl outline-none text-xs sm:w-64 font-bold" value={searchInputs.searchText} onChange={e => setSearchInputs({...searchInputs, searchText: e.target.value})} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
+            <input type="text" placeholder="업체명, 반송장, 담당자" className="w-full lg:w-auto p-3 bg-slate-50 rounded-xl outline-none text-xs sm:w-64 font-bold" value={searchInputs.searchText} onChange={e => setSearchInputs({...searchInputs, searchText: e.target.value})} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
           </div>
         </div>
         
@@ -216,15 +225,14 @@ export default function CodPage() {
         </div>
       </div>
 
-      {/* 📋 메인 정산 목록 분기 기법 */}
-
-      {/* 1. PC 및 대형 태블릿 (md 이상 와이드 테이블 노출) */}
+      {/* 📋 메인 정산 목록 (PC 버전) */}
       <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
               <th className="p-5 w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" onChange={handleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} /></th>
               <th className="p-5 w-24">상태</th>
+              <th className="p-5 w-28">담당자</th> {/* ✨ PC 테이블 담당자 추가 */}
               <th className="p-5 w-32">작성일자</th>
               <th className="p-5 w-32">구분</th>
               <th className="p-5 text-left">업체 / 반송장 정보</th>
@@ -242,6 +250,7 @@ export default function CodPage() {
                       {item.status}
                     </button>
                   </td>
+                  <td className="p-5 text-slate-700 text-xs">{item.manager_name || "-"}</td> {/* ✨ PC 테이블 담당자 값 */}
                   <td className="p-5 text-slate-500 text-xs">{item.created_at.split('T')[0]}</td>
                   <td className="p-5 text-center text-[10px]"><span className={`inline-block px-3 py-1 rounded-lg ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'}`}>{item.pay_type}</span></td>
                   <td className="p-5 text-left">
@@ -258,50 +267,37 @@ export default function CodPage() {
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={7} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
+              <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold italic text-lg">데이터가 없습니다. 🔍</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* 2. 모바일 특화 착불 대시형 카드 리스트 (md 미만 스마트폰 최적화 📱) */}
+      {/* 📱 모바일 리스트 */}
       <div className="block md:hidden space-y-4 text-black font-black">
-        {currentItems.length > 0 && (
-          <div className="flex items-center gap-2 px-1 text-xs text-slate-400">
-            <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" onChange={handleSelectAll} checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} />
-            <span>정산 전표 전체 선택 ({selectedIds.length}개 선택)</span>
-          </div>
-        )}
-
         {currentItems.map((item) => {
           const isSelected = selectedIds.includes(item.id);
           return (
             <div key={item.id} className={`p-4 rounded-xl bg-white border shadow-sm flex flex-col gap-3 transition-all ${isSelected ? 'border-blue-300 bg-blue-50/10' : 'border-slate-100'}`}>
-              
-              {/* 상단 메타 영역 */}
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" className="w-4 h-4 rounded accent-blue-600" checked={isSelected} onChange={() => handleSelect(item.id)} />
                   <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${item.pay_type === '정산입금' ? 'bg-blue-50 text-blue-600 border' : 'bg-purple-50 text-purple-600 border'}`}>{item.pay_type}</span>
                   <button onClick={(e) => toggleConfirm(e, item)} className={`px-2.5 py-0.5 rounded-full text-[9px] font-black ${item.status === '확인됨' ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 border animate-pulse'}`}>{item.status}</button>
+                  <span className="text-[9px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">{item.manager_name || "-"}</span> {/* ✨ 모바일 담당자 추가 */}
                 </div>
                 <span className="text-[10px] text-slate-400">{item.created_at.split('T')[0]}</span>
               </div>
-
-              {/* 정산 본문 정보 팩 */}
               <div className="space-y-1.5 text-left" onClick={() => openModal(item)}>
                 <div>
                   <p className="text-base font-black text-slate-900 tracking-tight">{item.customer_name}</p>
                   <p className="text-[10px] text-slate-400 font-mono mt-0.5">{item.delivery_company} 👉 {item.return_invoice}</p>
                 </div>
-                
                 <div className="flex justify-between items-baseline bg-slate-50 p-2.5 rounded-lg mt-1">
                   <span className="text-[11px] text-slate-400 font-bold">대행 운임 청구비</span>
                   <span className="text-base font-black text-blue-600">{item.fee.toLocaleString()}원</span>
                 </div>
               </div>
-
-              {/* 하단 개별 스위치 패널 */}
               <div className="flex justify-end gap-3 pt-2 border-t border-slate-50 text-xs">
                 <button onClick={() => openModal(item)} className="text-blue-600 font-black">내역수정</button>
                 <button onClick={(e) => handleDelete(e, item.id)} className="text-red-400 font-black">삭제</button>
@@ -309,13 +305,9 @@ export default function CodPage() {
             </div>
           );
         })}
-
-        {currentItems.length === 0 && (
-          <div className="p-16 bg-white rounded-xl text-center text-slate-300 italic">데이터가 없습니다. 🔍</div>
-        )}
       </div>
         
-      {/* 🔢 페이지네이션 (가변 스케일 매칭) */}
+      {/* 🔢 페이지네이션 */}
       <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-8 bg-white border-t border-slate-50 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
         <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">PREV</button>
         <div className="flex gap-1">
@@ -344,7 +336,7 @@ export default function CodPage() {
         </div>
       )}
 
-      {/* 📋 등록/수정 모달 (하단 키보드 자판 가림 대응 슬라이드 마진 패딩 고도화 📱) */}
+      {/* 📋 등록/수정 모달 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1a1c2e]/60 backdrop-blur-md flex justify-end md:p-4 z-50 overflow-hidden">
           <div className="bg-white w-full max-w-2xl h-full md:h-auto md:rounded-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-right duration-300 relative text-black flex flex-col font-black">
@@ -368,7 +360,13 @@ export default function CodPage() {
                     <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Customer Name</p>
                     <input required type="text" placeholder="업체명 기입" value={formData.customer_name} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, customer_name: e.target.value})} />
                   </div>
-                                                    
+
+                  {/* ✨ [ADD] 담당자명 기입란 추가 (업체명과 택배사 사이) */}
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Manager Name</p>
+                    <input type="text" placeholder="담당자 이름 기입" value={formData.manager_name} className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none shadow-inner text-xs font-bold text-black" onChange={e => setFormData({...formData, manager_name: e.target.value})} />
+                  </div>
+                                                                    
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <p className="text-[9px] text-slate-400 ml-2 uppercase font-black">Carrier</p>
