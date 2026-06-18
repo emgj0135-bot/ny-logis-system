@@ -45,7 +45,6 @@ export default function TruckPage() {
 
   useEffect(() => { 
     fetchData(); 
-    // 👇 엑셀 라이브러리 (비동기 병렬 주입 안정화)
     if (!document.getElementById('xlsx-script')) {
       const script = document.createElement('script');
       script.id = 'xlsx-script';
@@ -71,7 +70,6 @@ export default function TruckPage() {
     }
   };
 
-  // ✨ 야상배차 클릭 시 하차일자 자동으로 다음 날로 바꿔주는 스마트 체인저 함수
   const handleOrderTypeChange = (type: string, currentLoadingDate: string) => {
     setOrderType(type);
     if (type === '야상배차' && currentLoadingDate) {
@@ -84,10 +82,8 @@ export default function TruckPage() {
     }
   };
 
-  // 🚀 배차 신청/수정 로직
   const handleOrderSubmit = async () => {
     if (!formData.loading_place || !formData.unloading_place) return alert("필수 정보를 입력해주세요.");
-    
     const { order_responses, created_at, id, ...pureData } = formData as any;
     const submissionData = { ...pureData, order_type: orderType };
 
@@ -100,33 +96,20 @@ export default function TruckPage() {
     }
   };
 
-  // 🗑️ 삭제 로직
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from('truck_orders').delete().eq('id', id);
     if (!error) await fetchData();
   };
 
-  // ✅ [버튼 분리 1]: 오직 데이터베이스 저장만 담당하는 깔끔한 저장 함수
   const handleResponseSubmit = async (orderId: number) => {
     try {
       const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
-      
       if (existing) {
-        await supabase.from('order_responses').update({ 
-          car_info: resData.car_info, 
-          driver_name: resData.driver_name, 
-          fee: resData.fee 
-        }).eq('id', existing.id);
+        await supabase.from('order_responses').update({ car_info: resData.car_info, driver_name: resData.driver_name, fee: resData.fee }).eq('id', existing.id);
       } else {
-        await supabase.from('order_responses').insert([{ 
-          order_id: orderId, 
-          car_info: resData.car_info, 
-          driver_name: resData.driver_name, 
-          fee: resData.fee 
-        }]);
+        await supabase.from('order_responses').insert([{ order_id: orderId, car_info: resData.car_info, driver_name: resData.driver_name, fee: resData.fee }]);
       }
-      
       await supabase.from('truck_orders').update({ status: resData.status }).eq('id', orderId);
       alert("배차 정보가 정상적으로 저장되었습니다! ✅");
       await fetchData();
@@ -135,10 +118,8 @@ export default function TruckPage() {
     }
   };
 
-  // 📋 [버튼 분리 2]: 저장과 별개로 카톡 전송 양식만 클립보드로 쏙 복사해 주는 함수
   const handleCopyToClipboard = async (orderItem: any) => {
     const copyText = `[NY 로지스 배차 확정 안내]\n\n• 상차지: ${orderItem.loading_place}\n• 하차지: ${orderItem.unloading_place}${orderItem.unloading_place_2 ? ` -> ${orderItem.unloading_place_2}` : ''}\n• 배차유형: ${orderItem.order_type}\n• 차량정보: ${resData.car_info || "미등록"}\n• 기사명/연락처: ${resData.driver_name || "미등록"}\n• 운반비: ${resData.fee || "0"}원\n• 진행상태: ${resData.status}`;
-    
     try {
       await navigator.clipboard.writeText(copyText);
       alert("📋 카톡 전송용 배차 안내 텍스트가 복사되었습니다!\n원하는 카톡방에 Ctrl+V로 붙여넣으세요.");
@@ -171,12 +152,7 @@ export default function TruckPage() {
       setExpandedId(id);
       const order = list.find(o => o.id === id);
       const res = order?.order_responses?.[0];
-      setResData({ 
-        car_info: res?.car_info || "", 
-        driver_name: res?.driver_name || "", 
-        fee: res?.fee || "", 
-        status: order?.status || "신청완료" 
-      });
+      setResData({ car_info: res?.car_info || "", driver_name: res?.driver_name || "", fee: res?.fee || "", status: order?.status || "신청완료" });
     }
   };
 
@@ -188,9 +164,7 @@ export default function TruckPage() {
   const autoFillUnloading = (val: string, num: number) => {
     const b = bookmarks.find(x => x.place_name === val && x.type === '하차지');
     if(b) {
-      const target = num === 1 
-        ? { p: 'unloading_place', a: 'unloading_address', m: 'unloading_manager', ph: 'unloading_phone' }
-        : { p: 'unloading_place_2', a: 'unloading_address_2', m: 'unloading_manager_2', ph: 'unloading_phone_2' };
+      const target = num === 1 ? { p: 'unloading_place', a: 'unloading_address', m: 'unloading_manager', ph: 'unloading_phone' } : { p: 'unloading_place_2', a: 'unloading_address_2', m: 'unloading_manager_2', ph: 'unloading_phone_2' };
       setFormData(prev => ({...prev, [target.p]: b.place_name, [target.a]: b.address, [target.m]: b.manager_name || "", [target.ph]: b.manager_phone || ""}));
     }
   };
@@ -199,31 +173,9 @@ export default function TruckPage() {
     try {
       const XLSX = (window as any).XLSX;
       if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
-      
-      const { data, error } = await supabase
-        .from('truck_orders')
-        .select(`*, order_responses(*)`)
-        .gte('loading_date', excelRange.start)
-        .lte('loading_date', excelRange.end)
-        .order('loading_date', { ascending: true });
-        
+      const { data, error } = await supabase.from('truck_orders').select(`*, order_responses(*)`).gte('loading_date', excelRange.start).lte('loading_date', excelRange.end).order('loading_date', { ascending: true });
       if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
-      
-      const excelData = data.map((item, index) => ({ 
-        "No": index + 1, 
-        "작성일자": item.created_at.split('T')[0], 
-        "상차일자": item.loading_date, 
-        "배차유형": item.order_type, 
-        "상차지": item.loading_place, 
-        "하차지1": item.unloading_place,
-        "하차지2": item.unloading_place_2 || "-",
-        "제품명": item.product_name,
-        "기사명": item.order_responses?.[0]?.driver_name || "미등록",
-        "차량정보": item.order_responses?.[0]?.car_info || "미등록",
-        "운반비": item.order_responses?.[0]?.fee || "0",
-        "status": item.status 
-      }));
-      
+      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "상차일자": item.loading_date, "하차일자": item.unloading_date, "배차유형": item.order_type, "상차지": item.loading_place, "하차지1": item.unloading_place, "하차지2": item.unloading_place_2 || "-", "제품명": item.product_name, "기사명": item.order_responses?.[0]?.driver_name || "미등록", "차량정보": item.order_responses?.[0]?.car_info || "미등록", "운반비": item.order_responses?.[0]?.fee || "0", "status": item.status }));
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "용차배차내역");
@@ -232,7 +184,6 @@ export default function TruckPage() {
     } catch (err) { alert("엑셀 생성 오류!"); }
   };
 
-  // ✅ [수정 핵심]: 누락되었던 페이지네이션 핵심 슬라이싱 변수(currentItems)와 계산식 재배치
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
@@ -240,7 +191,6 @@ export default function TruckPage() {
 
   return (
     <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans text-slate-800 font-black">
-      
       {/* 🔵 헤더 영역 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-10">
         <div className="flex items-center gap-4">
@@ -299,7 +249,8 @@ export default function TruckPage() {
               <th className="p-5 w-32">작성일자</th>
               <th className="p-5 w-28">유형</th>
               <th className="p-5 text-left">배차 정보 (상차지 👉 하차지)</th>
-              <th className="p-5 w-32">상차일자</th>
+              <th className="p-5 w-28">상차일자</th>
+              <th className="p-5 w-28">하차일자</th> {/* ✨ PC 테이블 하차일자 컬럼 추가 */}
               <th className="p-5 w-24">상태</th>
               <th className="p-5 w-32">관리</th>
             </tr>
@@ -310,28 +261,20 @@ export default function TruckPage() {
               const displayNo = filteredList.length - (indexOfFirstItem + index);
               const isYasang = item.order_type === "야상배차";
               const isOlive = item.order_type === "올리브영";
-
               return (
                 <React.Fragment key={item.id}>
                   <tr onClick={() => toggleExpand(item.id)} className={`cursor-pointer hover:bg-slate-100/80 border-b transition-colors text-center ${isYasang ? 'bg-indigo-50/40' : isOlive ? 'bg-orange-50/30' : ''}`}>
                     <td className="p-5 text-blue-600">{displayNo}</td>
                     <td className="p-5 text-slate-400 text-xs font-bold">{item.created_at.split('T')[0]}</td>
                     <td className="p-5">
-                      <span className={`text-[10px] px-3 py-1.5 rounded-xl font-black block text-center shadow-sm whitespace-nowrap ${
-                        isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}>
-                        {isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}
-                      </span>
+                      <span className={`text-[10px] px-3 py-1.5 rounded-xl font-black block text-center shadow-sm whitespace-nowrap ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
                     </td>
                     <td className="p-5 text-left">
-                      <p className="text-slate-800 text-base tracking-tight font-black">
-                        {isYasang && <span className="text-purple-600 mr-1">🌙</span>}
-                        {isOlive && <span className="text-amber-500 mr-1">🌿</span>}
-                        {item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}
-                      </p>
+                      <p className="text-slate-800 text-base tracking-tight font-black">{isYasang && <span className="text-purple-600 mr-1">🌙</span>}{isOlive && <span className="text-amber-500 mr-1">🌿</span>}{item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}</p>
                       <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-bold">📦 {item.product_name} {item.product_name_2 && `| ${item.product_name_2}`}</p>
                     </td>
                     <td className="p-5 text-slate-800 text-xs font-black">{item.loading_date}</td>
+                    <td className="p-5 text-blue-600 text-xs font-black">{item.unloading_date}</td> {/* ✨ PC 테이블 하차일자 데이터 추가 */}
                     <td className="p-5">
                       <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                     </td>
@@ -344,16 +287,16 @@ export default function TruckPage() {
                   </tr>
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={7} className="p-8">
-                        <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
+                      <td colSpan={8}>
+                        <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm m-4">
                             <div className="grid grid-cols-2 gap-8 text-black text-left font-black">
                               <div className="space-y-4">
                                  <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">📍 Loading & Unloading Info</p>
                                  <div className="bg-slate-50 p-6 rounded-3xl text-xs space-y-2 font-black">
                                     <p><span className="text-slate-400">배차유형:</span> <span className={isYasang ? "text-purple-600 font-black" : isOlive ? "text-amber-600 font-black" : "text-slate-800 font-black"}>{item.order_type} {isYasang ? '🌙' : isOlive ? '🌿' : '☀️'}</span></p>
-                                    <p><span className="text-slate-400">상차지:</span> {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
+                                    <p><span className="text-slate-400">상차:</span> {item.loading_date} / {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
                                     <p><span className="text-slate-400">주소:</span> {item.loading_address}</p>
-                                    <p className="border-t border-slate-200 my-2 pt-2"><span className="text-slate-400">하차지1:</span> {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
+                                    <p className="border-t border-slate-200 my-2 pt-2"><span className="text-slate-400">하차:</span> {item.unloading_date} / {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
                                     <p><span className="text-slate-400">제품명1:</span> {item.product_name}</p>
                                     {item.unloading_place_2 && (
                                       <>
@@ -397,7 +340,6 @@ export default function TruckPage() {
           const displayNo = filteredList.length - (indexOfFirstItem + index);
           const isYasang = item.order_type === "야상배차";
           const isOlive = item.order_type === "올리브영";
-
           return (
             <div key={item.id} className={`p-4 rounded-xl border bg-white shadow-sm transition-all ${isYasang ? 'border-purple-200 bg-purple-50/20' : isOlive ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'}`}>
               <div className="flex justify-between items-center mb-3">
@@ -406,7 +348,11 @@ export default function TruckPage() {
                   <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-bold">{item.loading_date}</span>
+                {/* ✨ 모바일 카드 하차일자 정보 추가 표시 */}
+                <div className="text-right">
+                  <p className="text-[9px] text-slate-400 font-bold">상차: {item.loading_date}</p>
+                  <p className="text-[9px] text-blue-600 font-black">하차: {item.unloading_date}</p>
+                </div>
               </div>
               <div className="space-y-1" onClick={() => toggleExpand(item.id)}>
                 <p className="text-base font-black tracking-tight text-slate-900">{isYasang && <span className="text-purple-600 mr-1">🌙</span>}{isOlive && <span className="text-amber-500 mr-1">🌿</span>}{item.loading_place} 👉 {item.unloading_place}{item.unloading_place_2 && <span className="text-blue-500 text-xs block mt-0.5">→ {item.unloading_place_2}</span>}</p>
@@ -430,7 +376,7 @@ export default function TruckPage() {
                   </div>
                   <div className="space-y-2 bg-slate-50 p-4 rounded-xl font-black block">
                     <p className="text-xs text-blue-600 font-black mb-2">🚛 기사 정보 매칭</p>
-                    <input placeholder="차량정보 (예: 5톤 윙바디)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black mb-2" value={resData.car_info} onChange={e => setResData({...resData, car_info: e.target.value})} />
+                    <input placeholder="차량정보" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black mb-2" value={resData.car_info} onChange={e => setResData({...resData, car_info: e.target.value})} />
                     <input placeholder="기사명 연락처" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-black mb-2" value={resData.driver_name} onChange={e => setResData({...resData, driver_name: e.target.value})} />
                     <div className="grid grid-cols-2 gap-2 mb-3">
                       <input placeholder="운반비" className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-blue-600 font-black" value={resData.fee} onChange={e => setResData({...resData, fee: e.target.value})} />
@@ -492,21 +438,9 @@ export default function TruckPage() {
               <div className="bg-slate-50 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] shadow-inner space-y-4 font-black">
                 <div className="flex gap-2 bg-white p-1.5 rounded-xl shadow-sm">
                   {['당일배차', '야상배차', '올리브영'].map(t => (
-                    <button 
-                      key={t} 
-                      type="button" 
-                      onClick={() => handleOrderTypeChange(t, formData.loading_date)} 
-                      className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${
-                        orderType === t 
-                          ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : t === '올리브영' ? 'bg-amber-500 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') 
-                          : 'text-slate-400'
-                      }`}
-                    >
-                      {t === '야상배차' ? '🌙 야상배차' : t === '올리브영' ? '🌿 올리브영' : '☀️ 당일배차'}
-                    </button>
+                    <button key={t} type="button" onClick={() => handleOrderTypeChange(t, formData.loading_date)} className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${orderType === t ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : t === '올리브영' ? 'bg-amber-500 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-slate-400'}`}>{t === '야상배차' ? '🌙 야상배차' : t === '올리브영' ? '🌿 올리브영' : '☀️ 당일배차'}</button>
                   ))}
                 </div>
-                
                 <div className="grid grid-cols-2 gap-3">
                    <input type="date" value={formData.loading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => {
                      const newLDate = e.target.value;
