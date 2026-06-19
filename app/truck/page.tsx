@@ -43,6 +43,20 @@ export default function TruckPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
 
+  // ⏰ ✨ [추가포인트]: 24시간제 10분 단위 배열 생성 헬퍼 함수
+  const generateTimeOptions = () => {
+    const options = ["바로배차"];
+    for (let h = 0; h < 24; h++) {
+      const hourStr = String(h).padStart(2, "0");
+      for (let m = 0; m < 60; m += 10) {
+        const minStr = String(m).padStart(2, "0");
+        options.push(`${hourStr}:${minStr}`);
+      }
+    }
+    return options;
+  };
+  const timeOptions = generateTimeOptions();
+
   useEffect(() => { 
     fetchData(); 
     if (!document.getElementById('xlsx-script')) {
@@ -480,16 +494,18 @@ export default function TruckPage() {
                    <input type="date" value={formData.unloading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
                 </div>
 
-                {/* ⏰ 10분 단위로 세팅한 상하차 시간 선택 영역 */}
+                {/* ⏰ ✨ [추가포인트]: 24시간제 10분단위 select 창 + 하차시간 매칭 */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <p className="text-[9px] text-slate-400 ml-1 font-bold">상차시간</p>
-                    {/* ✨ step="600" 속성을 추가하여 스크롤 및 증감 시 10분 단위로 동작하도록 처리 */}
-                    <input type="time" step="600" value={formData.loading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
+                    <p className="text-[9px] text-slate-400 ml-1 font-bold">상차시간 (24H / 바로배차)</p>
+                    <select value={formData.loading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, loading_time: e.target.value})}>
+                      {timeOptions.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 ml-1 font-bold">하차시간</p>
-                    {/* ✨ step="600" 속성을 추가하여 스크롤 및 증감 시 10분 단위로 동작하도록 처리 */}
                     <input type="time" step="600" value={formData.unloading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
                   </div>
                 </div>
