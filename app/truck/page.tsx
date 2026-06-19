@@ -37,7 +37,7 @@ export default function TruckPage() {
     unloading_place: "", unloading_address: "", unloading_manager: "", unloading_phone: "",
     unloading_place_2: "", unloading_address_2: "", unloading_manager_2: "", unloading_phone_2: "",
     product_name: "", product_name_2: "",
-    loading_time: "09:00", unloading_time: "08:00", remarks: "" // 기본 하차시간 포맷 조정
+    loading_time: "09:00", unloading_time: "08:00", remarks: "" 
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -480,15 +480,17 @@ export default function TruckPage() {
                    <input type="date" value={formData.unloading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
                 </div>
 
-                {/* ⏰ ✨ [추가포인트]: 상하차 시간 선택 영역 배치 */}
+                {/* ⏰ 10분 단위로 세팅한 상하차 시간 선택 영역 */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 ml-1 font-bold">상차시간</p>
-                    <input type="time" value={formData.loading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
+                    {/* ✨ step="600" 속성을 추가하여 스크롤 및 증감 시 10분 단위로 동작하도록 처리 */}
+                    <input type="time" step="600" value={formData.loading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 ml-1 font-bold">하차시간</p>
-                    <input type="time" value={formData.unloading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
+                    {/* ✨ step="600" 속성을 추가하여 스크롤 및 증감 시 10분 단위로 동작하도록 처리 */}
+                    <input type="time" step="600" value={formData.unloading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
                   </div>
                 </div>
 
