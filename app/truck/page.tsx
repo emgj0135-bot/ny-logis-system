@@ -615,7 +615,8 @@ export default function TruckPage() {
                   <input value={formData.unloading_manager_2} placeholder="하차지2 담당자" className="w-full p-3.5 bg-white rounded-xl border-none text-xs shadow-sm font-bold text-black" onChange={e => setFormData({...formData, unloading_manager_2: e.target.value})} />
                   <input value={formData.unloading_phone_2} placeholder="하차지2 연락처" className="w-full p-3.5 bg-white rounded-xl border-none text-xs shadow-sm font-bold text-blue-600" onChange={e => setFormData({...formData, unloading_phone_2: e.target.value})} />
                 </div>
-                <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-4 bg-slate-800 text-white placeholder:text-slate-400 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: i.target.value})} />
+                {/* 🛠️ 이 부분의 i.target.value 오타를 e.target.value로 깔끔하게 수정 완료! */}
+                <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-4 bg-slate-800 text-white placeholder:text-slate-400 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: e.target.value})} />
               </section>
               <textarea value={formData.remarks} placeholder="📝 기타 비고 (특이사항)" className="w-full p-4 bg-slate-50 rounded-xl border-none text-xs shadow-inner h-28 font-black text-black" onChange={e => setFormData({...formData, remarks: e.target.value})} />
               <button onClick={handleOrderSubmit} className="w-full p-4 md:p-6 bg-blue-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest">{selectedOrder ? 'Save Changes 💾' : 'Submit Dispatch 🚀'}</button>
