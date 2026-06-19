@@ -43,17 +43,17 @@ export default function TruckPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
 
-  // ⏰ ✨ [추가포인트]: 시(Hour)와 분(Minute) 조립용 커스텀 상태 관리
+  // ⏰ ✨ [추가포인트]: 상하차 커스텀 시/분 상태 분리 관리
   const [loadingHour, setLoadingHour] = useState("09");
   const [loadingMin, setLoadingMin] = useState("00");
   const [unloadingHour, setUnloadingHour] = useState("08");
   const [unloadingMin, setUnloadingMin] = useState("00");
 
-  // 시간 드롭다운 옵션 배열 생성
-  const hoursOptions = ["바로배차", ...Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))];
-  const minutesOptions = ["00", "10", "20", "30", "40", "50"];
+  // 드롭다운 옵션 목록 정의 (바로배차 추가)
+  const hourOptions = ["바로배차", ...Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))];
+  const minOptions = ["00", "10", "20", "30", "40", "50"];
 
-  // 모달이 열리거나 데이터가 바뀔 때 시/분 분리해서 select 상태에 동기화
+  // 데이터 로드 및 수정 시 시간 쪼개서 각 select 박스 상태에 반영하기
   useEffect(() => {
     if (showOrderModal) {
       if (formData.loading_time === "바로배차") {
@@ -76,15 +76,15 @@ export default function TruckPage() {
     }
   }, [showOrderModal, formData.loading_time, formData.unloading_time]);
 
-  // 시, 분 상태가 변경될 때마다 최종 formData에 결합해주는 useEffect
+  // 사용자가 드롭다운을 조작할 때 실시간으로 하나의 텍스트("09:00" 또는 "바로배차")로 조립
   useEffect(() => {
-    const finalLoadingTime = loadingHour === "바로배차" ? "바로배차" : `${loadingHour}:${loadingMin}`;
-    const finalUnloadingTime = unloadingHour === "바로배차" ? "바로배차" : `${unloadingHour}:${unloadingMin}`;
+    const finalLoading = loadingHour === "바로배차" ? "바로배차" : `${loadingHour}:${loadingMin}`;
+    const finalUnloading = unloadingHour === "바로배차" ? "바로배차" : `${unloadingHour}:${unloadingMin}`;
     
     setFormData(prev => ({
       ...prev,
-      loading_time: finalLoadingTime,
-      unloading_time: finalUnloadingTime
+      loading_time: finalLoading,
+      unloading_time: finalUnloading
     }));
   }, [loadingHour, loadingMin, unloadingHour, unloadingMin]);
 
@@ -525,19 +525,44 @@ export default function TruckPage() {
                    <input type="date" value={formData.unloading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
                 </div>
 
-                {/* ⏰ ✨ [추가포인트]: 24시간제 10분단위 select 창 + 하차시간 매칭 */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* ⏰ 커스텀 상차시간 & 하차시간 일치화 레이아웃 영역 */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* 상차지 시간 */}
                   <div className="space-y-1">
                     <p className="text-[9px] text-slate-400 ml-1 font-bold">상차시간 (24H / 바로배차)</p>
-                    <select value={formData.loading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, loading_time: e.target.value})}>
-                      {timeOptions.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
+                    <div className="flex gap-2 bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                      <select value={loadingHour} className="flex-1 bg-transparent text-xs font-black text-black outline-none border-none cursor-pointer" onChange={e => setLoadingHour(e.target.value)}>
+                        {hourOptions.map(h => (
+                          <option key={h} value={h}>{h === "바로배차" ? "바로배차" : `${h}시`}</option>
+                        ))}
+                      </select>
+                      {loadingHour !== "바로배차" && (
+                        <select value={loadingMin} className="bg-transparent text-xs font-black text-blue-600 outline-none border-none cursor-pointer" onChange={e => setLoadingMin(e.target.value)}>
+                          {minOptions.map(m => (
+                            <option key={m} value={m}>{m}분</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
+
+                  {/* 하차지 시간 */}
                   <div className="space-y-1">
-                    <p className="text-[9px] text-slate-400 ml-1 font-bold">하차시간</p>
-                    <input type="time" step="600" value={formData.unloading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
+                    <p className="text-[9px] text-slate-400 ml-1 font-bold">하차시간 (24H / 바로배차)</p>
+                    <div className="flex gap-2 bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                      <select value={unloadingHour} className="flex-1 bg-transparent text-xs font-black text-black outline-none border-none cursor-pointer" onChange={e => setUnloadingHour(e.target.value)}>
+                        {hourOptions.map(h => (
+                          <option key={h} value={h}>{h === "바로배차" ? "바로배차" : `${h}시`}</option>
+                        ))}
+                      </select>
+                      {unloadingHour !== "바로배차" && (
+                        <select value={unloadingMin} className="bg-transparent text-xs font-black text-blue-600 outline-none border-none cursor-pointer" onChange={e => setUnloadingMin(e.target.value)}>
+                          {minOptions.map(m => (
+                            <option key={m} value={m}>{m}분</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -590,7 +615,7 @@ export default function TruckPage() {
                   <input value={formData.unloading_manager_2} placeholder="하차지2 담당자" className="w-full p-3.5 bg-white rounded-xl border-none text-xs shadow-sm font-bold text-black" onChange={e => setFormData({...formData, unloading_manager_2: e.target.value})} />
                   <input value={formData.unloading_phone_2} placeholder="하차지2 연락처" className="w-full p-3.5 bg-white rounded-xl border-none text-xs shadow-sm font-bold text-blue-600" onChange={e => setFormData({...formData, unloading_phone_2: e.target.value})} />
                 </div>
-                <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-4 bg-slate-800 text-white placeholder:text-slate-400 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: e.target.value})} />
+                <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-4 bg-slate-800 text-white placeholder:text-slate-400 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: i.target.value})} />
               </section>
               <textarea value={formData.remarks} placeholder="📝 기타 비고 (특이사항)" className="w-full p-4 bg-slate-50 rounded-xl border-none text-xs shadow-inner h-28 font-black text-black" onChange={e => setFormData({...formData, remarks: e.target.value})} />
               <button onClick={handleOrderSubmit} className="w-full p-4 md:p-6 bg-blue-600 text-white rounded-xl md:rounded-[2.5rem] text-sm md:text-xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest">{selectedOrder ? 'Save Changes 💾' : 'Submit Dispatch 🚀'}</button>
