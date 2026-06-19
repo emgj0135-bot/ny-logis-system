@@ -37,7 +37,7 @@ export default function TruckPage() {
     unloading_place: "", unloading_address: "", unloading_manager: "", unloading_phone: "",
     unloading_place_2: "", unloading_address_2: "", unloading_manager_2: "", unloading_phone_2: "",
     product_name: "", product_name_2: "",
-    loading_time: "09:00", unloading_time: "익일 08:00", remarks: ""
+    loading_time: "09:00", unloading_time: "08:00", remarks: "" // 기본 하차시간 포맷 조정
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -250,9 +250,9 @@ export default function TruckPage() {
               <th className="p-5 w-24">유형</th>
               <th className="p-5 text-left">배차 정보 (상차지 👉 하차지)</th>
               <th className="p-5 w-28">상차일자</th>
-              <th className="p-5 w-24">상차시간</th> {/* ✨ 상차시간 추가 */}
+              <th className="p-5 w-24">상차시간</th>
               <th className="p-5 w-28">하차일자</th>
-              <th className="p-5 w-24">하차시간</th> {/* ✨ 하차시간 추가 */}
+              <th className="p-5 w-24">하차시간</th>
               <th className="p-5 w-24">상태</th>
               <th className="p-5 w-28">관리</th>
             </tr>
@@ -276,9 +276,9 @@ export default function TruckPage() {
                       <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-bold">📦 {item.product_name} {item.product_name_2 && `| ${item.product_name_2}`}</p>
                     </td>
                     <td className="p-5 text-slate-800 text-xs font-black">{item.loading_date}</td>
-                    <td className="p-5 text-slate-600 text-xs font-bold">{item.loading_time || "09:00"}</td> {/* ✨ 상차시간 매칭 */}
+                    <td className="p-5 text-slate-600 text-xs font-bold">{item.loading_time || "09:00"}</td>
                     <td className="p-5 text-blue-600 text-xs font-black">{item.unloading_date}</td>
-                    <td className="p-5 text-slate-600 text-xs font-bold">{item.unloading_time || "익일 08:00"}</td> {/* ✨ 하차시간 매칭 */}
+                    <td className="p-5 text-slate-600 text-xs font-bold">{item.unloading_time || "08:00"}</td>
                     <td className="p-5">
                       <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                     </td>
@@ -291,7 +291,7 @@ export default function TruckPage() {
                   </tr>
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={10}> {/* colSpan을 10으로 확대 */}
+                      <td colSpan={10}>
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm m-4">
                             <div className="grid grid-cols-2 gap-8 text-black text-left font-black">
                               <div className="space-y-4">
@@ -301,9 +301,8 @@ export default function TruckPage() {
                                     <p><span className="text-slate-400">상차:</span> {item.loading_date} ({item.loading_time || "09:00"}) / {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
                                     <p><span className="text-slate-400">주소:</span> {item.loading_address}</p>
                                     
-                                    {/* ✨ 1번 요구사항: 하차 정보 레이아웃 가로 세분화 개행 */}
                                     <div className="border-t border-slate-200 my-2 pt-2 space-y-1">
-                                      <p><span className="text-slate-400">하차:</span> {item.unloading_date} ({item.unloading_time || "익일 08:00"}) / {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
+                                      <p><span className="text-slate-400">하차:</span> {item.unloading_date} ({item.unloading_time || "08:00"}) / {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
                                       <p><span className="text-slate-400">하차지 주소:</span> {item.unloading_address}</p>
                                       <p><span className="text-slate-400">제품명:</span> {item.product_name}</p>
                                     </div>
@@ -315,7 +314,6 @@ export default function TruckPage() {
                                         <p><span className="text-slate-400">제품명2:</span> {item.product_name_2}</p>
                                       </div>
                                     )}
-                                    {/* ✨ 3번 요구사항: 비고란 엔터 서식 그대로 출력 (whitespace-pre-wrap) */}
                                     <div className="pt-2 border-t border-slate-200">
                                       <span className="text-red-500 font-bold block mb-1">📝 비고 (특이사항):</span>
                                       <p className="text-slate-800 font-black bg-white p-3 rounded-xl border border-red-100 whitespace-pre-wrap leading-relaxed">{item.remarks || "없음"}</p>
@@ -363,10 +361,9 @@ export default function TruckPage() {
                   <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                 </div>
-                {/* ✨ 2번 요구사항: 모바일 카드 상/하차 시간까지 밀착 매칭 */}
                 <div className="text-right text-[9px] font-bold space-y-0.5">
-                  <p class="text-slate-400">상차: {item.loading_date} ({item.loading_time || "09:00"})</p>
-                  <p class="text-blue-600">하차: {item.unloading_date} ({item.unloading_time || "익일 08:00"})</p>
+                  <p className="text-slate-400">상차: {item.loading_date} ({item.loading_time || "09:00"})</p>
+                  <p className="text-blue-600">하차: {item.unloading_date} ({item.unloading_time || "08:00"})</p>
                 </div>
               </div>
               <div className="space-y-1" onClick={() => toggleExpand(item.id)}>
@@ -386,7 +383,6 @@ export default function TruckPage() {
                     <p><span className="text-slate-400">상차지 주소:</span> {item.loading_address}</p>
                     <p><span className="text-slate-400">상차 담당:</span> {item.loading_manager || "-"} / {item.loading_phone || "-"}</p>
                     
-                    {/* ✨ 모바일 상세 분기 정렬 */}
                     <p className="border-t border-slate-200 pt-1.5 mt-1.5"><span className="text-slate-400">하차지 주소:</span> {item.unloading_address}</p>
                     <p><span className="text-slate-400">하차1 담당:</span> {item.unloading_manager || "-"} / {item.unloading_phone || "-"}</p>
                     {item.unloading_place_2 && (
@@ -395,7 +391,6 @@ export default function TruckPage() {
                         <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>
                       </>
                     )}
-                    {/* ✨ 모바일 비고란 개행 처리 */}
                     <div className="text-red-500 font-black mt-2 pt-1.5 border-t border-slate-200">
                       <span>비고:</span>
                       <p className="text-slate-800 mt-1 whitespace-pre-wrap bg-white p-2 rounded-lg border">{item.remarks || "없음"}</p>
@@ -468,6 +463,8 @@ export default function TruckPage() {
                     <button key={t} type="button" onClick={() => handleOrderTypeChange(t, formData.loading_date)} className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${orderType === t ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : t === '올리브영' ? 'bg-amber-500 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-slate-400'}`}>{t === '야상배차' ? '🌙 야상배차' : t === '올리브영' ? '🌿 올리브영' : '☀️ 당일배차'}</button>
                   ))}
                 </div>
+                
+                {/* 📅 날짜 선택 영역 */}
                 <div className="grid grid-cols-2 gap-3">
                    <input type="date" value={formData.loading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => {
                      const newLDate = e.target.value;
@@ -482,6 +479,19 @@ export default function TruckPage() {
                    }} />
                    <input type="date" value={formData.unloading_date} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black" onChange={e => setFormData({...formData, unloading_date: e.target.value})} />
                 </div>
+
+                {/* ⏰ ✨ [추가포인트]: 상하차 시간 선택 영역 배치 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-slate-400 ml-1 font-bold">상차시간</p>
+                    <input type="time" value={formData.loading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, loading_time: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-slate-400 ml-1 font-bold">하차시간</p>
+                    <input type="time" value={formData.unloading_time} className="w-full p-3.5 rounded-xl border-none text-xs shadow-sm outline-none font-black text-black bg-white" onChange={e => setFormData({...formData, unloading_time: e.target.value})} />
+                  </div>
+                </div>
+
               </div>
               <section className="space-y-3 font-black">
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black ml-2">Loading Point (상차지)</p>
