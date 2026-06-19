@@ -175,7 +175,7 @@ export default function TruckPage() {
       if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
       const { data, error } = await supabase.from('truck_orders').select(`*, order_responses(*)`).gte('loading_date', excelRange.start).lte('loading_date', excelRange.end).order('loading_date', { ascending: true });
       if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
-      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "상차일자": item.loading_date, "하차일자": item.unloading_date, "배차유형": item.order_type, "상차지": item.loading_place, "하차지1": item.unloading_place, "하차지2": item.unloading_place_2 || "-", "제품명": item.product_name, "기사명": item.order_responses?.[0]?.driver_name || "미등록", "차량정보": item.order_responses?.[0]?.car_info || "미등록", "운반비": item.order_responses?.[0]?.fee || "0", "status": item.status }));
+      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "상차일자": item.loading_date, "상차시간": item.loading_time || "", "하차일자": item.unloading_date, "하차시간": item.unloading_time || "", "배차유형": item.order_type, "상차지": item.loading_place, "하차지1": item.unloading_place, "하차지2": item.unloading_place_2 || "-", "제품명": item.product_name, "기사명": item.order_responses?.[0]?.driver_name || "미등록", "차량정보": item.order_responses?.[0]?.car_info || "미등록", "운반비": item.order_responses?.[0]?.fee || "0", "status": item.status }));
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "용차배차내역");
@@ -247,12 +247,14 @@ export default function TruckPage() {
             <tr>
               <th className="p-5 w-16">No</th>
               <th className="p-5 w-32">작성일자</th>
-              <th className="p-5 w-28">유형</th>
+              <th className="p-5 w-24">유형</th>
               <th className="p-5 text-left">배차 정보 (상차지 👉 하차지)</th>
               <th className="p-5 w-28">상차일자</th>
-              <th className="p-5 w-28">하차일자</th> {/* ✨ PC 테이블 하차일자 컬럼 추가 */}
+              <th className="p-5 w-24">상차시간</th> {/* ✨ 상차시간 추가 */}
+              <th className="p-5 w-28">하차일자</th>
+              <th className="p-5 w-24">하차시간</th> {/* ✨ 하차시간 추가 */}
               <th className="p-5 w-24">상태</th>
-              <th className="p-5 w-32">관리</th>
+              <th className="p-5 w-28">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -274,7 +276,9 @@ export default function TruckPage() {
                       <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-bold">📦 {item.product_name} {item.product_name_2 && `| ${item.product_name_2}`}</p>
                     </td>
                     <td className="p-5 text-slate-800 text-xs font-black">{item.loading_date}</td>
-                    <td className="p-5 text-blue-600 text-xs font-black">{item.unloading_date}</td> {/* ✨ PC 테이블 하차일자 데이터 추가 */}
+                    <td className="p-5 text-slate-600 text-xs font-bold">{item.loading_time || "09:00"}</td> {/* ✨ 상차시간 매칭 */}
+                    <td className="p-5 text-blue-600 text-xs font-black">{item.unloading_date}</td>
+                    <td className="p-5 text-slate-600 text-xs font-bold">{item.unloading_time || "익일 08:00"}</td> {/* ✨ 하차시간 매칭 */}
                     <td className="p-5">
                       <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                     </td>
@@ -287,24 +291,35 @@ export default function TruckPage() {
                   </tr>
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={8}>
+                      <td colSpan={10}> {/* colSpan을 10으로 확대 */}
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm m-4">
                             <div className="grid grid-cols-2 gap-8 text-black text-left font-black">
                               <div className="space-y-4">
                                  <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">📍 Loading & Unloading Info</p>
-                                 <div className="bg-slate-50 p-6 rounded-3xl text-xs space-y-2 font-black">
+                                 <div className="bg-slate-50 p-6 rounded-3xl text-xs space-y-3 font-black">
                                     <p><span className="text-slate-400">배차유형:</span> <span className={isYasang ? "text-purple-600 font-black" : isOlive ? "text-amber-600 font-black" : "text-slate-800 font-black"}>{item.order_type} {isYasang ? '🌙' : isOlive ? '🌿' : '☀️'}</span></p>
-                                    <p><span className="text-slate-400">상차:</span> {item.loading_date} / {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
+                                    <p><span className="text-slate-400">상차:</span> {item.loading_date} ({item.loading_time || "09:00"}) / {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
                                     <p><span className="text-slate-400">주소:</span> {item.loading_address}</p>
-                                    <p className="border-t border-slate-200 my-2 pt-2"><span className="text-slate-400">하차:</span> {item.unloading_date} / {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
-                                    <p><span className="text-slate-400">제품명1:</span> {item.product_name}</p>
+                                    
+                                    {/* ✨ 1번 요구사항: 하차 정보 레이아웃 가로 세분화 개행 */}
+                                    <div className="border-t border-slate-200 my-2 pt-2 space-y-1">
+                                      <p><span className="text-slate-400">하차:</span> {item.unloading_date} ({item.unloading_time || "익일 08:00"}) / {item.unloading_place} ({item.unloading_manager || "미등록"} / {item.unloading_phone || "-"})</p>
+                                      <p><span className="text-slate-400">하차지 주소:</span> {item.unloading_address}</p>
+                                      <p><span className="text-slate-400">제품명:</span> {item.product_name}</p>
+                                    </div>
+
                                     {item.unloading_place_2 && (
-                                      <>
-                                        <p className="border-t border-slate-200 my-2 pt-2"><span className="text-slate-400">하차지2:</span> {item.unloading_place_2} ({item.unloading_manager_2 || "미등록"} / {item.unloading_phone_2 || "-"})</p>
+                                      <div className="border-t border-slate-200 my-2 pt-2 space-y-1">
+                                        <p><span className="text-slate-400">하차2:</span> {item.unloading_place_2} ({item.unloading_manager_2 || "미등록"} / {item.unloading_phone_2 || "-"})</p>
+                                        <p><span className="text-slate-400">하차지2 주소:</span> {item.unloading_address_2}</p>
                                         <p><span className="text-slate-400">제품명2:</span> {item.product_name_2}</p>
-                                      </>
+                                      </div>
                                     )}
-                                    <p className="pt-2 text-red-500 font-bold font-black underline underline-offset-4 decoration-2">비고: {item.remarks || "없음"}</p>
+                                    {/* ✨ 3번 요구사항: 비고란 엔터 서식 그대로 출력 (whitespace-pre-wrap) */}
+                                    <div className="pt-2 border-t border-slate-200">
+                                      <span className="text-red-500 font-bold block mb-1">📝 비고 (특이사항):</span>
+                                      <p className="text-slate-800 font-black bg-white p-3 rounded-xl border border-red-100 whitespace-pre-wrap leading-relaxed">{item.remarks || "없음"}</p>
+                                    </div>
                                  </div>
                               </div>
                               <div className="space-y-4 font-black">
@@ -348,10 +363,10 @@ export default function TruckPage() {
                   <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                 </div>
-                {/* ✨ 모바일 카드 하차일자 정보 추가 표시 */}
-                <div className="text-right">
-                  <p className="text-[9px] text-slate-400 font-bold">상차: {item.loading_date}</p>
-                  <p className="text-[9px] text-blue-600 font-black">하차: {item.unloading_date}</p>
+                {/* ✨ 2번 요구사항: 모바일 카드 상/하차 시간까지 밀착 매칭 */}
+                <div className="text-right text-[9px] font-bold space-y-0.5">
+                  <p class="text-slate-400">상차: {item.loading_date} ({item.loading_time || "09:00"})</p>
+                  <p class="text-blue-600">하차: {item.unloading_date} ({item.unloading_time || "익일 08:00"})</p>
                 </div>
               </div>
               <div className="space-y-1" onClick={() => toggleExpand(item.id)}>
@@ -370,9 +385,21 @@ export default function TruckPage() {
                   <div className="bg-slate-50 p-4 rounded-xl text-xs space-y-2 font-black">
                     <p><span className="text-slate-400">상차지 주소:</span> {item.loading_address}</p>
                     <p><span className="text-slate-400">상차 담당:</span> {item.loading_manager || "-"} / {item.loading_phone || "-"}</p>
-                    <p className="border-t border-slate-200 pt-1.5 mt-1.5"><span className="text-slate-400">하차1 담당:</span> {item.unloading_manager || "-"} / {item.unloading_phone || "-"}</p>
-                    {item.unloading_place_2 && <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>}
-                    <p className="text-red-500 font-black mt-1">비고: {item.remarks || "없음"}</p>
+                    
+                    {/* ✨ 모바일 상세 분기 정렬 */}
+                    <p className="border-t border-slate-200 pt-1.5 mt-1.5"><span className="text-slate-400">하차지 주소:</span> {item.unloading_address}</p>
+                    <p><span className="text-slate-400">하차1 담당:</span> {item.unloading_manager || "-"} / {item.unloading_phone || "-"}</p>
+                    {item.unloading_place_2 && (
+                      <>
+                        <p className="border-t border-slate-100 pt-1.5"><span className="text-slate-400">하차지2 주소:</span> {item.unloading_address_2}</p>
+                        <p><span className="text-slate-400">하차2 담당:</span> {item.unloading_manager_2 || "-"} / {item.unloading_phone_2 || "-"}</p>
+                      </>
+                    )}
+                    {/* ✨ 모바일 비고란 개행 처리 */}
+                    <div className="text-red-500 font-black mt-2 pt-1.5 border-t border-slate-200">
+                      <span>비고:</span>
+                      <p className="text-slate-800 mt-1 whitespace-pre-wrap bg-white p-2 rounded-lg border">{item.remarks || "없음"}</p>
+                    </div>
                   </div>
                   <div className="space-y-2 bg-slate-50 p-4 rounded-xl font-black block">
                     <p className="text-xs text-blue-600 font-black mb-2">🚛 기사 정보 매칭</p>
