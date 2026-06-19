@@ -43,19 +43,50 @@ export default function TruckPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
 
-  // ⏰ ✨ [추가포인트]: 24시간제 10분 단위 배열 생성 헬퍼 함수
-  const generateTimeOptions = () => {
-    const options = ["바로배차"];
-    for (let h = 0; h < 24; h++) {
-      const hourStr = String(h).padStart(2, "0");
-      for (let m = 0; m < 60; m += 10) {
-        const minStr = String(m).padStart(2, "0");
-        options.push(`${hourStr}:${minStr}`);
+  // ⏰ ✨ [추가포인트]: 시(Hour)와 분(Minute) 조립용 커스텀 상태 관리
+  const [loadingHour, setLoadingHour] = useState("09");
+  const [loadingMin, setLoadingMin] = useState("00");
+  const [unloadingHour, setUnloadingHour] = useState("08");
+  const [unloadingMin, setUnloadingMin] = useState("00");
+
+  // 시간 드롭다운 옵션 배열 생성
+  const hoursOptions = ["바로배차", ...Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))];
+  const minutesOptions = ["00", "10", "20", "30", "40", "50"];
+
+  // 모달이 열리거나 데이터가 바뀔 때 시/분 분리해서 select 상태에 동기화
+  useEffect(() => {
+    if (showOrderModal) {
+      if (formData.loading_time === "바로배차") {
+        setLoadingHour("바로배차");
+        setLoadingMin("00");
+      } else {
+        const [h, m] = (formData.loading_time || "09:00").split(":");
+        setLoadingHour(h || "09");
+        setLoadingMin(m || "00");
+      }
+
+      if (formData.unloading_time === "바로배차") {
+        setUnloadingHour("바로배차");
+        setUnloadingMin("00");
+      } else {
+        const [h, m] = (formData.unloading_time || "08:00").split(":");
+        setUnloadingHour(h || "08");
+        setUnloadingMin(m || "00");
       }
     }
-    return options;
-  };
-  const timeOptions = generateTimeOptions();
+  }, [showOrderModal, formData.loading_time, formData.unloading_time]);
+
+  // 시, 분 상태가 변경될 때마다 최종 formData에 결합해주는 useEffect
+  useEffect(() => {
+    const finalLoadingTime = loadingHour === "바로배차" ? "바로배차" : `${loadingHour}:${loadingMin}`;
+    const finalUnloadingTime = unloadingHour === "바로배차" ? "바로배차" : `${unloadingHour}:${unloadingMin}`;
+    
+    setFormData(prev => ({
+      ...prev,
+      loading_time: finalLoadingTime,
+      unloading_time: finalUnloadingTime
+    }));
+  }, [loadingHour, loadingMin, unloadingHour, unloadingMin]);
 
   useEffect(() => { 
     fetchData(); 
