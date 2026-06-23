@@ -24,10 +24,12 @@ export default function TruckPage() {
   const [orderType, setOrderType] = useState('당일배차');
   const [excelRange, setExcelRange] = useState({ start: today, end: today });
 
+  // 📝 [수정포인트]: 검색 필터 조건에 work_status(기본값 전체 "") 추가
   const [filters, setFilters] = useState({
     created_start: "", created_end: "", 
     loading_start: "", loading_end: "",
-    status: ""
+    status: "",
+    work_status: ""
   });
 
   const initialFormState = {
@@ -41,8 +43,6 @@ export default function TruckPage() {
   };
 
   const [formData, setFormData] = useState(initialFormState);
-  
-  // 📝 [수정포인트]: resData에 상차 작업 상태(work_status) 추가
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료", work_status: "상차 진행예정" });
 
   // ⏰ ✨ [추가포인트]: 상하차 커스텀 시/분 상태 분리 관리
@@ -149,7 +149,6 @@ export default function TruckPage() {
     if (!error) await fetchData();
   };
 
-  // 📝 [수정포인트]: 저장 시 work_status 데이터베이스 연동 반영 (truck_orders 테이블)
   const handleResponseSubmit = async (orderId: number) => {
     try {
       const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
@@ -159,7 +158,6 @@ export default function TruckPage() {
         await supabase.from('order_responses').insert([{ order_id: orderId, car_info: resData.car_info, driver_name: resData.driver_name, fee: resData.fee }]);
       }
       
-      // truck_orders 테이블에 status와 work_status 함께 업데이트
       await supabase.from('truck_orders').update({ status: resData.status, work_status: resData.work_status }).eq('id', orderId);
       alert("배차 및 작업 정보가 정상적으로 저장되었습니다! ✅");
       await fetchData();
@@ -178,6 +176,7 @@ export default function TruckPage() {
     }
   };
 
+  // 📝 [수정포인트]: handleSearch 필터 기능에 work_status 연동
   const handleSearch = () => {
     let result = [...list];
     if (filters.created_start) result = result.filter(item => item.created_at.split('T')[0] >= filters.created_start);
@@ -185,18 +184,24 @@ export default function TruckPage() {
     if (filters.loading_start) result = result.filter(item => item.loading_date >= filters.loading_start);
     if (filters.loading_end) result = result.filter(item => item.loading_date <= filters.loading_end);
     if (filters.status) result = result.filter(item => item.status === filters.status);
+    
+    // 작업상태 필터링 (값이 지정되어 있을 때만 필터 동작, 없으면 전체)
+    if (filters.work_status) {
+      result = result.filter(item => (item.work_status || "상차 진행예정") === filters.work_status);
+    }
+
     setFilteredList(result);
     setCurrentPage(1);
     setExpandedId(null);
   };
 
+  // 📝 [수정포인트]: resetFilters 시 work_status도 리셋되도록 초기화
   const resetFilters = () => {
-    setFilters({ created_start: "", created_end: "", loading_start: "", loading_end: "", status: "" });
+    setFilters({ created_start: "", created_end: "", loading_start: "", loading_end: "", status: "", work_status: "" });
     setFilteredList(list);
     setCurrentPage(1);
   };
 
-  // 📝 [수정포인트]: 확장할 때 기존 데이터의 work_status 불러와서 반영
   const toggleExpand = async (id: number) => {
     if (expandedId === id) setExpandedId(null);
     else {
@@ -290,6 +295,15 @@ export default function TruckPage() {
               <option value="배차완료">배차완료</option>
             </select>
           </div>
+          {/* 📝 [수정포인트]: Status 옆에 작업상태 필터 콤보박스 추가 */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-widest">작업상태</p>
+            <select value={filters.work_status} onChange={e => setFilters({...filters, work_status: e.target.value})} className="w-full lg:w-auto p-3 bg-slate-100 rounded-xl border-none text-xs font-black text-slate-600 min-w-[150px] outline-none">
+              <option value="">작업 전체</option>
+              <option value="상차 진행예정">상차 진행예정</option>
+              <option value="상차완료">상차완료</option>
+            </select>
+          </div>
         </div>
         <div className="flex gap-2 pt-2 md:pt-4 border-t border-slate-50">
           <button onClick={handleSearch} className="flex-1 lg:flex-none bg-slate-800 text-white px-8 py-3 rounded-xl font-black text-xs hover:bg-black transition-all">검색 🔍</button>
@@ -300,7 +314,6 @@ export default function TruckPage() {
       {/* 📋 메인 테이블 리스트 (PC 뷰) */}
       <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm font-black">
-          {/* 📝 [수정포인트]: 하차시간 / 상태 / 관리 -> 상태 / 작업 / 관리 변경 반영 */}
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
               <th className="p-5 w-14">No</th>
@@ -341,7 +354,6 @@ export default function TruckPage() {
                     <td className="p-5">
                       <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                     </td>
-                    {/* 📝 [수정포인트]: 작업(상차진행예정 / 상차완료) 컬럼 출력 */}
                     <td className="p-5">
                       <span className={`text-[10px] px-3 py-1.5 rounded-full whitespace-nowrap ${item.work_status === '상차완료' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-500'}`}>
                         {item.work_status || "상차 진행예정"}
@@ -396,7 +408,6 @@ export default function TruckPage() {
                                        <option value="배차완료">배차완료</option>
                                     </select>
                                     
-                                    {/* 📝 [수정포인트]: 배차유형 아래에 작업상태(작업) 콤보박스 선택창 배치 */}
                                     <div className="col-span-2 space-y-1">
                                       <p className="text-[10px] text-slate-400 ml-1 font-bold">🛠️ 작업 상태 변경</p>
                                       <select className="w-full p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner font-black text-green-700" value={resData.work_status} onChange={e => setResData({...resData, work_status: e.target.value})}>
@@ -435,7 +446,6 @@ export default function TruckPage() {
                   <span className="text-xs text-blue-600 font-black">#{displayNo}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
-                  {/* 📝 [수정포인트]: 모바일 상단에도 작업 태그 노출 */}
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.work_status === '상차완료' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-100 text-slate-500'}`}>{item.work_status || "상차 진행예정"}</span>
                 </div>
                 <div className="text-right text-[9px] font-bold space-y-0.5">
@@ -485,7 +495,6 @@ export default function TruckPage() {
                       </select>
                     </div>
                     
-                    {/* 📝 [수정포인트]: 모바일 상세 뷰에도 작업 상태 변경 추가 */}
                     <div className="space-y-1 mb-3">
                       <p className="text-[10px] text-slate-400 ml-1 font-bold">🛠️ 작업 상태 변경</p>
                       <select className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-green-700" value={resData.work_status} onChange={e => setResData({...resData, work_status: e.target.value})}>
