@@ -41,7 +41,9 @@ export default function TruckPage() {
   };
 
   const [formData, setFormData] = useState(initialFormState);
-  const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료" });
+  
+  // 📝 [수정포인트]: resData에 상차 작업 상태(work_status) 추가
+  const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료", work_status: "상차 진행예정" });
 
   // ⏰ ✨ [추가포인트]: 상하차 커스텀 시/분 상태 분리 관리
   const [loadingHour, setLoadingHour] = useState("09");
@@ -136,7 +138,7 @@ export default function TruckPage() {
       const { error } = await supabase.from('truck_orders').update(submissionData).eq('id', selectedOrder.id);
       if (!error) { alert("수정 완료! ✨"); setShowOrderModal(false); await fetchData(); }
     } else {
-      const { error } = await supabase.from('truck_orders').insert([{ ...submissionData, status: '신청완료' }]);
+      const { error } = await supabase.from('truck_orders').insert([{ ...submissionData, status: '신청완료', work_status: '상차 진행예정' }]);
       if (!error) { alert("배차 신청 완료! 🚀"); setShowOrderModal(false); await fetchData(); }
     }
   };
@@ -147,6 +149,7 @@ export default function TruckPage() {
     if (!error) await fetchData();
   };
 
+  // 📝 [수정포인트]: 저장 시 work_status 데이터베이스 연동 반영 (truck_orders 테이블)
   const handleResponseSubmit = async (orderId: number) => {
     try {
       const { data: existing } = await supabase.from('order_responses').select('id').eq('order_id', orderId).maybeSingle();
@@ -155,8 +158,10 @@ export default function TruckPage() {
       } else {
         await supabase.from('order_responses').insert([{ order_id: orderId, car_info: resData.car_info, driver_name: resData.driver_name, fee: resData.fee }]);
       }
-      await supabase.from('truck_orders').update({ status: resData.status }).eq('id', orderId);
-      alert("배차 정보가 정상적으로 저장되었습니다! ✅");
+      
+      // truck_orders 테이블에 status와 work_status 함께 업데이트
+      await supabase.from('truck_orders').update({ status: resData.status, work_status: resData.work_status }).eq('id', orderId);
+      alert("배차 및 작업 정보가 정상적으로 저장되었습니다! ✅");
       await fetchData();
     } catch (err) {
       alert("저장 중 오류가 발생했습니다. 다시 시도해 주세요!");
@@ -164,7 +169,7 @@ export default function TruckPage() {
   };
 
   const handleCopyToClipboard = async (orderItem: any) => {
-    const copyText = `[NY 로지스 배차 확정 안내]\n\n• 상차지: ${orderItem.loading_place}\n• 하차지: ${orderItem.unloading_place}${orderItem.unloading_place_2 ? ` -> ${orderItem.unloading_place_2}` : ''}\n• 배차유형: ${orderItem.order_type}\n• 차량정보: ${resData.car_info || "미등록"}\n• 기사명/연락처: ${resData.driver_name || "미등록"}\n• 운반비: ${resData.fee || "0"}원\n• 진행상태: ${resData.status}`;
+    const copyText = `[NY 로지스 배차 확정 안내]\n\n• 상차지: ${orderItem.loading_place}\n• 하차지: ${orderItem.unloading_place}${orderItem.unloading_place_2 ? ` -> ${orderItem.unloading_place_2}` : ''}\n• 배차유형: ${orderItem.order_type}\n• 차량정보: ${resData.car_info || "미등록"}\n• 기사명/연락처: ${resData.driver_name || "미등록"}\n• 운반비: ${resData.fee || "0"}원\n• 진행상태: ${resData.status}\n• 작업상태: ${resData.work_status}`;
     try {
       await navigator.clipboard.writeText(copyText);
       alert("📋 카톡 전송용 배차 안내 텍스트가 복사되었습니다!\n원하는 카톡방에 Ctrl+V로 붙여넣으세요.");
@@ -191,13 +196,20 @@ export default function TruckPage() {
     setCurrentPage(1);
   };
 
+  // 📝 [수정포인트]: 확장할 때 기존 데이터의 work_status 불러와서 반영
   const toggleExpand = async (id: number) => {
     if (expandedId === id) setExpandedId(null);
     else {
       setExpandedId(id);
       const order = list.find(o => o.id === id);
       const res = order?.order_responses?.[0];
-      setResData({ car_info: res?.car_info || "", driver_name: res?.driver_name || "", fee: res?.fee || "", status: order?.status || "신청완료" });
+      setResData({ 
+        car_info: res?.car_info || "", 
+        driver_name: res?.driver_name || "", 
+        fee: res?.fee || "", 
+        status: order?.status || "신청완료",
+        work_status: order?.work_status || "상차 진행예정" 
+      });
     }
   };
 
@@ -220,7 +232,7 @@ export default function TruckPage() {
       if (!XLSX) return alert("라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.");
       const { data, error } = await supabase.from('truck_orders').select(`*, order_responses(*)`).gte('loading_date', excelRange.start).lte('loading_date', excelRange.end).order('loading_date', { ascending: true });
       if (error || !data || data.length === 0) return alert("해당 기간에 데이터가 없습니다.");
-      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "상차일자": item.loading_date, "상차시간": item.loading_time || "", "하차일자": item.unloading_date, "하차시간": item.unloading_time || "", "배차유형": item.order_type, "상차지": item.loading_place, "하차지1": item.unloading_place, "하차지2": item.unloading_place_2 || "-", "제품명": item.product_name, "기사명": item.order_responses?.[0]?.driver_name || "미등록", "차량정보": item.order_responses?.[0]?.car_info || "미등록", "운반비": item.order_responses?.[0]?.fee || "0", "status": item.status }));
+      const excelData = data.map((item, index) => ({ "No": index + 1, "작성일자": item.created_at.split('T')[0], "상차일자": item.loading_date, "상차시간": item.loading_time || "", "하차일자": item.unloading_date, "하차시간": item.unloading_time || "", "배차유형": item.order_type, "상차지": item.loading_place, "하차지1": item.unloading_place, "하차지2": item.unloading_place_2 || "-", "제품명": item.product_name, "기사명": item.order_responses?.[0]?.driver_name || "미등록", "차량정보": item.order_responses?.[0]?.car_info || "미등록", "운반비": item.order_responses?.[0]?.fee || "0", "status": item.status, "작업상태": item.work_status || "상차 진행예정" }));
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "용차배차내역");
@@ -288,18 +300,20 @@ export default function TruckPage() {
       {/* 📋 메인 테이블 리스트 (PC 뷰) */}
       <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden font-black text-black">
         <table className="w-full text-sm font-black">
+          {/* 📝 [수정포인트]: 하차시간 / 상태 / 관리 -> 상태 / 작업 / 관리 변경 반영 */}
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase border-b tracking-widest text-center">
             <tr>
-              <th className="p-5 w-16">No</th>
-              <th className="p-5 w-32">작성일자</th>
-              <th className="p-5 w-24">유형</th>
+              <th className="p-5 w-14">No</th>
+              <th className="p-5 w-28">작성일자</th>
+              <th className="p-5 w-20">유형</th>
               <th className="p-5 text-left">배차 정보 (상차지 👉 하차지)</th>
-              <th className="p-5 w-28">상차일자</th>
-              <th className="p-5 w-24">상차시간</th>
-              <th className="p-5 w-28">하차일자</th>
-              <th className="p-5 w-24">하차시간</th>
+              <th className="p-5 w-24">상차일자</th>
+              <th className="p-5 w-20">상차시간</th>
+              <th className="p-5 w-24">하차일자</th>
+              <th className="p-5 w-20">하차시간</th>
               <th className="p-5 w-24">상태</th>
-              <th className="p-5 w-28">관리</th>
+              <th className="p-5 w-28">작업</th>
+              <th className="p-5 w-24">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -327,6 +341,12 @@ export default function TruckPage() {
                     <td className="p-5">
                       <span className={`text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                     </td>
+                    {/* 📝 [수정포인트]: 작업(상차진행예정 / 상차완료) 컬럼 출력 */}
+                    <td className="p-5">
+                      <span className={`text-[10px] px-3 py-1.5 rounded-full whitespace-nowrap ${item.work_status === '상차완료' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-500'}`}>
+                        {item.work_status || "상차 진행예정"}
+                      </span>
+                    </td>
                     <td className="p-5 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2 justify-center text-[10px]">
                         <button onClick={() => { setSelectedOrder(item); setFormData({...item}); setOrderType(item.order_type); setShowOrderModal(true); }} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-black">수정</button>
@@ -336,7 +356,7 @@ export default function TruckPage() {
                   </tr>
                   {isExpanded && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={10}>
+                      <td colSpan={11}>
                         <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm m-4">
                             <div className="grid grid-cols-2 gap-8 text-black text-left font-black">
                               <div className="space-y-4">
@@ -375,6 +395,16 @@ export default function TruckPage() {
                                        <option value="신청완료">신청완료</option>
                                        <option value="배차완료">배차완료</option>
                                     </select>
+                                    
+                                    {/* 📝 [수정포인트]: 배차유형 아래에 작업상태(작업) 콤보박스 선택창 배치 */}
+                                    <div className="col-span-2 space-y-1">
+                                      <p className="text-[10px] text-slate-400 ml-1 font-bold">🛠️ 작업 상태 변경</p>
+                                      <select className="w-full p-4 bg-slate-50 rounded-2xl text-xs outline-none shadow-inner font-black text-green-700" value={resData.work_status} onChange={e => setResData({...resData, work_status: e.target.value})}>
+                                         <option value="상차 진행예정">상차 진행예정</option>
+                                         <option value="상차완료">상차완료</option>
+                                      </select>
+                                    </div>
+
                                     <button onClick={() => handleResponseSubmit(item.id)} className="py-4 bg-blue-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-blue-700 transition-all">배차 정보 저장 💾</button>
                                     <button onClick={() => handleCopyToClipboard(item)} className="py-4 bg-green-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-green-700 transition-all">카톡 양식 복사 📋</button>
                                  </div>
@@ -401,10 +431,12 @@ export default function TruckPage() {
           return (
             <div key={item.id} className={`p-4 rounded-xl border bg-white shadow-sm transition-all ${isYasang ? 'border-purple-200 bg-purple-50/20' : isOlive ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'}`}>
               <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs text-blue-600 font-black">#{displayNo}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
+                  {/* 📝 [수정포인트]: 모바일 상단에도 작업 태그 노출 */}
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.work_status === '상차완료' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-100 text-slate-500'}`}>{item.work_status || "상차 진행예정"}</span>
                 </div>
                 <div className="text-right text-[9px] font-bold space-y-0.5">
                   <p className="text-slate-400">상차: {item.loading_date} ({item.loading_time || "09:00"})</p>
@@ -452,6 +484,16 @@ export default function TruckPage() {
                         <option value="배차완료">배차완료</option>
                       </select>
                     </div>
+                    
+                    {/* 📝 [수정포인트]: 모바일 상세 뷰에도 작업 상태 변경 추가 */}
+                    <div className="space-y-1 mb-3">
+                      <p className="text-[10px] text-slate-400 ml-1 font-bold">🛠️ 작업 상태 변경</p>
+                      <select className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-green-700" value={resData.work_status} onChange={e => setResData({...resData, work_status: e.target.value})}>
+                        <option value="상차 진행예정">상차 진행예정</option>
+                        <option value="상차완료">상차완료</option>
+                      </select>
+                    </div>
+
                     <div className="flex flex-col gap-2">
                       <button onClick={() => handleResponseSubmit(item.id)} className="w-full py-3.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-md text-center">배차 정보 저장 💾</button>
                       <button onClick={() => handleCopyToClipboard(item)} className="w-full py-3.5 bg-green-600 text-white rounded-xl text-xs font-black shadow-md text-center">카톡 양식 복사 📋</button>
@@ -615,7 +657,6 @@ export default function TruckPage() {
                   <input value={formData.unloading_manager_2} placeholder="하차지2 담당자" className="w-full p-3.5 bg-white rounded-xl border-none text-xs shadow-sm font-bold text-black" onChange={e => setFormData({...formData, unloading_manager_2: e.target.value})} />
                   <input value={formData.unloading_phone_2} placeholder="하차지2 연락처" className="w-full p-3.5 bg-white rounded-xl border-none text-xs shadow-sm font-bold text-blue-600" onChange={e => setFormData({...formData, unloading_phone_2: e.target.value})} />
                 </div>
-                {/* 🛠️ 이 부분의 i.target.value 오타를 e.target.value로 깔끔하게 수정 완료! */}
                 <input value={formData.product_name_2} placeholder="📦 제품명 및 수량 (하차2)" className="w-full p-4 bg-slate-800 text-white placeholder:text-slate-400 rounded-xl border-none text-xs shadow-md font-black" onChange={e => setFormData({...formData, product_name_2: e.target.value})} />
               </section>
               <textarea value={formData.remarks} placeholder="📝 기타 비고 (특이사항)" className="w-full p-4 bg-slate-50 rounded-xl border-none text-xs shadow-inner h-28 font-black text-black" onChange={e => setFormData({...formData, remarks: e.target.value})} />
