@@ -262,7 +262,6 @@ export default function PalletsPage() {
             <tr>
               <th className="p-6 text-center w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer" checked={currentItems.length > 0 && currentItems.every(item => selectedIds.includes(item.id))} onChange={toggleSelectAll} /></th>
               <th className="p-6 text-left">상태</th>
-              {/* ✨ [UI 요구사항] 상태와 작성일자 사이에 담당자명 헤더 기입! */}
               <th className="p-6 text-left text-blue-600 font-black">담당자</th>
               <th className="p-6 text-left">작성일자</th>
               <th className="p-6 text-center">구분</th> 
@@ -279,7 +278,6 @@ export default function PalletsPage() {
                 <td className="p-6">
                   <button onClick={(e) => handleStatusUpdate(e, item.id, item.status)} className={`px-4 py-1.5 rounded-full text-[10px] whitespace-nowrap ${item.status === '미확인' ? 'bg-orange-50 text-orange-500 animate-pulse' : 'bg-green-50 text-green-500'}`}>{item.status}</button>
                 </td>
-                {/* ✨ [UI 요구사항] 상태와 작성일자 사이에 담당자 데이터 확인 구현 */}
                 <td className="p-6 text-slate-700 font-black tracking-tight">{item.manager_name || "-"}</td>
                 <td className="p-6 text-slate-400 text-[10px] whitespace-nowrap">{formatDate(item.created_at)}</td>
                 <td className="p-6 text-center"><span className={`inline-block px-3 py-1 rounded-lg text-[10px] ${item.type === '출고' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{item.type}</span></td>
@@ -333,7 +331,6 @@ export default function PalletsPage() {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <p className="text-base font-black text-slate-900 tracking-tight">{item.company_name}</p>
-                    {/* 📱 모바일 버전 전표 이름 옆에도 담당자 미니 텍스트 추가 */}
                     <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">👤 {item.manager_name || "미지정"}</span>
                   </div>
                   <p className="text-[10px] text-slate-400 font-normal">등록: {formatDate(item.created_at)}</p>
@@ -407,13 +404,13 @@ export default function PalletsPage() {
                     <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-2 rounded-lg font-black text-xs transition-all ${formData.type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>{t}</button>
                   ))}
                 </div>
-                <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none text-blue-600 shadow-inner" value={formData.issue_date} onChange={e => setExcelRange({...excelRange, start: e.target.value})} />
+                {/* 🔧 [버그 해결] onChange가 setExcelRange로 오타 나있던 것을 setFormData로 수정 완료 */}
+                <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none text-blue-600 shadow-inner" value={formData.issue_date} onChange={e => setFormData({...formData, issue_date: e.target.value})} />
               </div>
               
-              {/* ✨ [수정] 업체명 인풋 단일 배치에서 담당자명 기입창까지 포함하도록 고도화 */}
+              {/* ✨ [레이아웃 정렬 완료] 업체명과 담당자 인풋 영역 */}
               <div className="grid grid-cols-2 gap-3">
                 <input placeholder="업체명 (필수)" className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} />
-                {/* 👤 [요구사항] 업체명과 KPP 세션 사이에 배치한 담당자명 인풋 박스 */}
                 <input placeholder="담당자명" className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-xs outline-none shadow-inner text-blue-600" value={formData.manager_name} onChange={e => setFormData({...formData, manager_name: e.target.value})} />
               </div>
               
