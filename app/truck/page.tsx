@@ -451,12 +451,17 @@ export default function TruckPage() {
           const displayNo = filteredList.length - (indexOfFirstItem + index);
           const isYasang = item.order_type === "야상배차";
           const isOlive = item.order_type === "올리브영";
+          const isCompany = item.order_type === "업체납품"; // ✅ 업체납품 변수 추가
+
           return (
-            <div key={item.id} className={`p-4 rounded-xl border bg-white shadow-sm transition-all ${isYasang ? 'border-purple-200 bg-purple-50/20' : isOlive ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'}`}>
+            <div key={item.id} className={`p-4 rounded-xl border bg-white shadow-sm transition-all ${isYasang ? 'border-purple-200 bg-purple-50/20' : isOlive ? 'border-amber-200 bg-amber-50/20' : isCompany ? 'border-teal-200 bg-teal-50/20' : 'border-slate-100'}`}>
               <div className="flex justify-between items-center mb-3">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs text-blue-600 font-black">#{displayNo}</span>
-                  <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
+                  {/* ✅ 표면적으로는 '납품'으로 표시되도록 수정 */}
+                  <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : isCompany ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 border'}`}>
+                    {isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : isCompany ? '🏢 납품' : '☀️ 당일'}
+                  </span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.status === '배차완료' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 animate-pulse'}`}>{item.status}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${item.work_status === '상차완료' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-100 text-slate-500'}`}>{item.work_status || "상차 진행예정"}</span>
                 </div>
@@ -466,7 +471,13 @@ export default function TruckPage() {
                 </div>
               </div>
               <div className="space-y-1" onClick={() => toggleExpand(item.id)}>
-                <p className="text-base font-black tracking-tight text-slate-900">{isYasang && <span className="text-purple-600 mr-1">🌙</span>}{isOlive && <span className="text-amber-500 mr-1">🌿</span>}{item.loading_place} 👉 {item.unloading_place}{item.unloading_place_2 && <span className="text-blue-500 text-xs block mt-0.5">→ {item.unloading_place_2}</span>}</p>
+                {/* ✅ 업체납품일 때 🏢 아이콘 추가 */}
+                <p className="text-base font-black tracking-tight text-slate-900">
+                  {isYasang && <span className="text-purple-600 mr-1">🌙</span>}
+                  {isOlive && <span className="text-amber-500 mr-1">🌿</span>}
+                  {isCompany && <span className="text-teal-600 mr-1">🏢</span>}
+                  {item.loading_place} 👉 {item.unloading_place}{item.unloading_place_2 && <span className="text-blue-500 text-xs block mt-0.5">→ {item.unloading_place_2}</span>}
+                </p>
                 <p className="text-xs text-slate-400 font-bold">📦 {item.product_name}</p>
               </div>
               <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-slate-100">
@@ -479,6 +490,8 @@ export default function TruckPage() {
               {isExpanded && (
                 <div className="mt-4 pt-3 border-t border-dashed border-slate-200 space-y-4 text-left">
                   <div className="bg-slate-50 p-4 rounded-xl text-xs space-y-2 font-black">
+                    {/* ✅ 상세 열었을 때 배차유형 표시도 '납품'으로 일치화 */}
+                    <p><span className="text-slate-400">배차유형:</span> <span className={isYasang ? "text-purple-600 font-black" : isOlive ? "text-amber-600 font-black" : isCompany ? "text-teal-600 font-black" : "text-slate-800 font-black"}>{item.order_type} {isYasang ? '🌙' : isOlive ? '🌿' : isCompany ? '🏢' : '☀️'}</span></p>
                     <p><span className="text-slate-400">상차지 주소:</span> {item.loading_address}</p>
                     <p><span className="text-slate-400">상차 담당:</span> {item.loading_manager || "-"} / {item.loading_phone || "-"}</p>
                     
