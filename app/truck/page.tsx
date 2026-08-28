@@ -41,7 +41,10 @@ export default function TruckPage() {
     product_name: "", product_name_2: "",
     loading_time: "09:00", unloading_time: "08:00", remarks: "" 
   };
-
+const pageSize = 10; // 한 화면에 보여줄 페이지 번호 개수 (10개씩)
+const currentGroup = Math.floor((currentPage - 1) / pageSize);
+const startPage = currentGroup * pageSize + 1;
+const endPage = Math.min(startPage + pageSize - 1, totalPages);
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료", work_status: "상차 진행예정" });
 
