@@ -335,16 +335,28 @@ export default function TruckPage() {
               const displayNo = filteredList.length - (indexOfFirstItem + index);
               const isYasang = item.order_type === "야상배차";
               const isOlive = item.order_type === "올리브영";
+              const isCompany = item.order_type === "업체납품"; // ✅ 업체납품 변수 추가
+
               return (
                 <React.Fragment key={item.id}>
-                  <tr onClick={() => toggleExpand(item.id)} className={`cursor-pointer hover:bg-slate-100/80 border-b transition-colors text-center ${isYasang ? 'bg-indigo-50/40' : isOlive ? 'bg-orange-50/30' : ''}`}>
+                  {/* ✅ 업체납품일 경우 배경색 은은한 청록색(teal-50) 적용 */}
+                  <tr onClick={() => toggleExpand(item.id)} className={`cursor-pointer hover:bg-slate-100/80 border-b transition-colors text-center ${isYasang ? 'bg-indigo-50/40' : isOlive ? 'bg-orange-50/30' : isCompany ? 'bg-teal-50/30' : ''}`}>
                     <td className="p-5 text-blue-600">{displayNo}</td>
                     <td className="p-5 text-slate-400 text-xs font-bold">{item.created_at.split('T')[0]}</td>
                     <td className="p-5">
-                      <span className={`text-[10px] px-3 py-1.5 rounded-xl font-black block text-center shadow-sm whitespace-nowrap ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>{isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : '☀️ 당일'}</span>
+                      {/* ✅ 업체납품 뱃지 (청록색 텍스트/배경) - 글자 수 맞춤 위해 '🏢 업체' 로 통일감 부여 */}
+                      <span className={`text-[10px] px-3 py-1.5 rounded-xl font-black block text-center shadow-sm whitespace-nowrap ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : isCompany ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                        {isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : isCompany ? '🏢 업체' : '☀️ 당일'}
+                      </span>
                     </td>
                     <td className="p-5 text-left">
-                      <p className="text-slate-800 text-base tracking-tight font-black">{isYasang && <span className="text-purple-600 mr-1">🌙</span>}{isOlive && <span className="text-amber-500 mr-1">🌿</span>}{item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}</p>
+                      {/* ✅ 배차 정보 앞에 업체납품 빌딩(🏢) 아이콘 추가 */}
+                      <p className="text-slate-800 text-base tracking-tight font-black">
+                        {isYasang && <span className="text-purple-600 mr-1">🌙</span>}
+                        {isOlive && <span className="text-amber-500 mr-1">🌿</span>}
+                        {isCompany && <span className="text-teal-600 mr-1">🏢</span>}
+                        {item.loading_place} 👉 {item.unloading_place} {item.unloading_place_2 && <span className="text-blue-500">→ {item.unloading_place_2}</span>}
+                      </p>
                       <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-wider font-bold">📦 {item.product_name} {item.product_name_2 && `| ${item.product_name_2}`}</p>
                     </td>
                     <td className="p-5 text-slate-800 text-xs font-black">{item.loading_date}</td>
@@ -374,7 +386,8 @@ export default function TruckPage() {
                               <div className="space-y-4">
                                  <p className="text-xs text-blue-600 uppercase tracking-widest italic font-black">📍 Loading & Unloading Info</p>
                                  <div className="bg-slate-50 p-6 rounded-3xl text-xs space-y-3 font-black">
-                                    <p><span className="text-slate-400">배차유형:</span> <span className={isYasang ? "text-purple-600 font-black" : isOlive ? "text-amber-600 font-black" : "text-slate-800 font-black"}>{item.order_type} {isYasang ? '🌙' : isOlive ? '🌿' : '☀️'}</span></p>
+                                    {/* ✅ 확장 패널 내 배차유형 텍스트 및 아이콘에 업체납품 추가 */}
+                                    <p><span className="text-slate-400">배차유형:</span> <span className={isYasang ? "text-purple-600 font-black" : isOlive ? "text-amber-600 font-black" : isCompany ? "text-teal-600 font-black" : "text-slate-800 font-black"}>{item.order_type} {isYasang ? '🌙' : isOlive ? '🌿' : isCompany ? '🏢' : '☀️'}</span></p>
                                     <p><span className="text-slate-400">상차:</span> {item.loading_date} ({item.loading_time || "09:00"}) / {item.loading_place} ({item.loading_manager || "담당자 미지정"} / {item.loading_phone || "-"})</p>
                                     <p><span className="text-slate-400">주소:</span> {item.loading_address}</p>
                                     
@@ -431,7 +444,6 @@ export default function TruckPage() {
           </tbody>
         </table>
       </div>
-
       {/* 2. 카드형 리스트 (모바일 뷰) */}
       <div className="block md:hidden space-y-4 text-black">
         {currentItems.map((item, index) => {
