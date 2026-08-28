@@ -344,9 +344,9 @@ export default function TruckPage() {
                     <td className="p-5 text-blue-600">{displayNo}</td>
                     <td className="p-5 text-slate-400 text-xs font-bold">{item.created_at.split('T')[0]}</td>
                     <td className="p-5">
-                      {/* ✅ 업체납품 뱃지 (청록색 텍스트/배경) - 글자 수 맞춤 위해 '🏢 업체' 로 통일감 부여 */}
+                      {/* ✅ 업체납품 뱃지 (청록색 텍스트/배경) - 글자 수 맞춤 위해 '🏢 납품' 로 통일감 부여 */}
                       <span className={`text-[10px] px-3 py-1.5 rounded-xl font-black block text-center shadow-sm whitespace-nowrap ${isYasang ? 'bg-purple-600 text-white' : isOlive ? 'bg-amber-500 text-white' : isCompany ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
-                        {isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : isCompany ? '🏢 업체' : '☀️ 당일'}
+                        {isYasang ? '🌙 야상' : isOlive ? '🌿 올영' : isCompany ? '🏢 납품' : '☀️ 당일'}
                       </span>
                     </td>
                     <td className="p-5 text-left">
