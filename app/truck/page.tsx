@@ -555,10 +555,27 @@ export default function TruckPage() {
             <div className="flex-1 overflow-y-auto p-5 md:p-12 pt-4 space-y-6 md:space-y-8 font-black pb-28 md:pb-12">
               <div className="bg-slate-50 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] shadow-inner space-y-4 font-black">
                 <div className="flex gap-2 bg-white p-1.5 rounded-xl shadow-sm">
-                  {['당일배차', '야상배차', '올리브영'].map(t => (
-                    <button key={t} type="button" onClick={() => handleOrderTypeChange(t, formData.loading_date)} className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${orderType === t ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' : t === '올리브영' ? 'bg-amber-500 text-white shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-slate-400'}`}>{t === '야상배차' ? '🌙 야상배차' : t === '올리브영' ? '🌿 올리브영' : '☀️ 당일배차'}</button>
-                  ))}
-                </div>
+  {['당일배차', '야상배차', '올리브영', '업체납품'].map(t => (
+    <button 
+      key={t} 
+      type="button" 
+      onClick={() => handleOrderTypeChange(t, formData.loading_date)} 
+      className={`flex-1 py-3 rounded-lg text-xs transition-all font-black ${
+        orderType === t 
+          ? (t === '야상배차' ? 'bg-purple-600 text-white shadow-md' 
+            : t === '올리브영' ? 'bg-amber-500 text-white shadow-md' 
+            : t === '업체납품' ? 'bg-teal-600 text-white shadow-md' // ✅ 업체납품 선택 시 청록색(teal)
+            : 'bg-blue-600 text-white shadow-md') 
+          : 'text-slate-400'
+      }`}
+    >
+      {t === '야상배차' ? '🌙 야상배차' 
+        : t === '올리브영' ? '🌿 올리브영' 
+        : t === '업체납품' ? '🏢 업체납품' // ✅ 업체납품 텍스트와 아이콘
+        : '☀️ 당일배차'}
+    </button>
+  ))}
+</div>
                 
                 {/* 📅 날짜 선택 영역 */}
                 <div className="grid grid-cols-2 gap-3">
