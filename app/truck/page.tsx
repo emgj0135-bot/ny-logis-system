@@ -41,10 +41,7 @@ export default function TruckPage() {
     product_name: "", product_name_2: "",
     loading_time: "09:00", unloading_time: "08:00", remarks: "" 
   };
-const pageSize = 10; // 한 화면에 보여줄 페이지 번호 개수 (10개씩)
-const currentGroup = Math.floor((currentPage - 1) / pageSize);
-const startPage = currentGroup * pageSize + 1;
-const endPage = Math.min(startPage + pageSize - 1, totalPages);
+
   const [formData, setFormData] = useState(initialFormState);
   const [resData, setResData] = useState({ car_info: "", driver_name: "", fee: "", status: "신청완료", work_status: "상차 진행예정" });
 
@@ -543,45 +540,16 @@ const endPage = Math.min(startPage + pageSize - 1, totalPages);
         })}
       </div>
         
-      {/* 🔢 페이지네이션 (10개 단위 그룹핑) */}
-<div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-8 bg-white border-t border-slate-50 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
-  {/* 이전 10개 단위로 이동 */}
-  <button 
-    onClick={() => setCurrentPage(Math.max(startPage - pageSize, 1))} 
-    disabled={startPage === 1} 
-    className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-35 transition-all"
-  >
-    PREV
-  </button>
-
-  <div className="flex gap-1">
-    {Array.from({ length: endPage - startPage + 1 }, (_, i) => {
-      const pageNum = startPage + i;
-      return (
-        <button 
-          key={pageNum} 
-          onClick={() => setCurrentPage(pageNum)} 
-          className={`w-8 h-8 md:w-10 md:h-10 rounded-xl text-xs transition-all font-black ${
-            currentPage === pageNum 
-              ? 'bg-blue-600 text-white shadow-lg' 
-              : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'
-          }`}
-        >
-          {pageNum}
-        </button>
-      );
-    })}
-  </div>
-
-  {/* 다음 10개 단위로 이동 */}
-  <button 
-    onClick={() => setCurrentPage(Math.min(startPage + pageSize, totalPages))} 
-    disabled={endPage >= totalPages} 
-    className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-35 transition-all"
-  >
-    NEXT
-  </button>
-</div>
+      {/* 🔢 페이지네이션 */}
+      <div className="flex justify-center items-center gap-1 md:gap-2 p-4 md:p-8 bg-white border-t border-slate-50 font-black mt-4 rounded-xl md:rounded-none shadow-sm md:shadow-none">
+        <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">PREV</button>
+        <div className="flex gap-1">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`w-8 h-8 md:w-10 md:h-10 rounded-xl text-xs transition-all font-black ${currentPage === i+1 ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}>{i+1}</button>
+          ))}
+        </div>
+        <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-xs font-black disabled:opacity-30">NEXT</button>
+      </div>
 
       {/* 📥 엑셀 기간 선택 모달 */}
       {showExcelModal && (
